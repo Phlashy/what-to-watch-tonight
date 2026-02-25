@@ -1,0 +1,27 @@
+{
+  "name": "movie-night",
+  "private": true,
+  "scripts": {
+    "dev": "bash scripts/stop-pm2.sh && concurrently -n server,client -c cyan,magenta \"npm run server\" \"npm run client\"",
+    "server": "npm --prefix server run dev",
+    "client": "npm --prefix client run dev",
+    "build": "npm run icons && npm run build --prefix client",
+    "deploy": "bash scripts/deploy.sh",
+    "prod:start": "bash scripts/deploy.sh",
+    "prod:stop": "bash scripts/stop-pm2.sh",
+    "prod:status": "npx pm2 list",
+    "prod:logs": "npx pm2 logs movie-night --lines 50",
+    "import": "node seed-data/import.js",
+    "enrich": "node scripts/enrich-tmdb.js",
+    "dedup": "node scripts/dedup-titles.js",
+    "backfill-added-by": "node scripts/backfill-added-by.js",
+    "icons": "node scripts/generate-icons.js"
+  },
+  "devDependencies": {
+    "concurrently": "^8.2.2"
+  },
+  "dependencies": {
+    "better-sqlite3": "^12.6.2",
+    "dotenv": "^17.3.1"
+  }
+}

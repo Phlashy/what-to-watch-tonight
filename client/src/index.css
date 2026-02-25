@@ -1,0 +1,27 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  html {
+    background-color: #0f172a;
+    color: #f1f5f9;
+  }
+
+  body {
+    @apply bg-slate-950 text-slate-100 min-h-screen;
+    -webkit-tap-highlight-color: transparent;
+  }
+}
+
+@layer utilities {
+  .safe-bottom {
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+  .pb-safe {
+    padding-bottom: calc(4rem + env(safe-area-inset-bottom));
+  }
+  .pb-modal-safe {
+    padding-bottom: max(1rem, env(safe-area-inset-bottom));
+  }
+}

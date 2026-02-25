@@ -1,0 +1,44 @@
+# Dependencies
+node_modules/
+client/node_modules/
+server/node_modules/
+
+# Build output
+client/dist/
+
+# Environment variables
+.env
+.env.local
+
+# Database (stored outside repo at ~/movie-night-data/)
+*.db
+*.db-shm
+*.db-wal
+
+# macOS
+.DS_Store
+**/.DS_Store
+
+# Logs
+*.log
+npm-debug.log*
+
+# Editor
+.vscode/
+.idea/
+
+# pm2
+.pm2/
+
+# Claude Code local settings
+.claude/settings.local.json
+
+# Personal data files (not for public repo)
+seed-data/final_consolidated.json
+HANDOFF.md
+bug-report.md
+movie-night-brief.md
+DVD Collection/
+wtwt/
+wtwt icon.png
+*.docx
