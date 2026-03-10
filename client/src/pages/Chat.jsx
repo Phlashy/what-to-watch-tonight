@@ -7,7 +7,7 @@ const SUGGESTIONS = [
   "What did we watch last month?",
   "Find a comedy for tonight",
   "What's on the family watchlist?",
-  "What are Davin's top-rated movies?",
+  "What are our top-rated movies?",
 ];
 
 // Parse [[id:Title Name]] into clickable links

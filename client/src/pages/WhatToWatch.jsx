@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import LogViewing from '../components/LogViewing';
 import QuickAdd from '../components/QuickAdd';
 import { usePerson } from '../context/PersonContext';
+import { useFamily } from '../context/FamilyContext';
 import {
   DndContext,
   closestCenter,
@@ -18,33 +19,6 @@ import {
   arrayMove,
 } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
-
-// Provider IDs for services the family subscribes to (verified against TMDB CA region)
-const MY_SERVICE_IDS = new Set([
-  8,    // Netflix
-  1796, // Netflix Standard with Ads
-  119,  // Amazon Prime Video
-  2100, // Amazon Prime Video with Ads
-  337,  // Disney Plus
-  11,   // MUBI
-  314,  // CBC Gem
-  73,   // Tubi TV
-  538,  // Plex
-  2,    // Apple TV Store (iTunes purchases)
-  350,  // Apple TV Plus
-]);
-
-const CONTEXTS = [
-  { id: 'family',   label: 'Family',  emoji: '👨‍👩‍👧‍👦', subtitle: 'Movie Night' },
-  { id: 'nupur',    label: 'Nupur',   emoji: '💑',      subtitle: 'Me + Nupur' },
-  { id: 'arianne',  label: 'Arianne', emoji: '🎬',      subtitle: "Arianne's 100" },
-  { id: 'davin',    label: 'Davin',   emoji: '📺',      subtitle: 'Me + Davin' },
-  { id: 'solo',     label: 'Solo',    emoji: '🎭',      subtitle: 'Gordon' },
-  { id: 'christmas',label: 'Xmas',   emoji: '🎄',      subtitle: 'Christmas' },
-];
-
-// Family members only (excludes occasional viewers like Julian)
-const PEOPLE = ['Gordon', 'Nupur', 'Arianne', 'Davin'];
 
 // ── Swipeable wrapper ─────────────────────────────────────────────────────────
 function SwipeToRemove({ children, onDismiss }) {
@@ -125,6 +99,7 @@ function SwipeToRemove({ children, onDismiss }) {
 
 // ── Shortlist picker popover ──────────────────────────────────────────────────
 function ShortlistButton({ titleId, context, shortlistedBy = [], onToggle, currentPerson }) {
+  const { allPeople: PEOPLE } = useFamily();
   const [open, setOpen] = useState(false);
   const ref = useRef(null);
 
@@ -199,6 +174,7 @@ function ShortlistButton({ titleId, context, shortlistedBy = [], onToggle, curre
 
 // ── Title card for WhatToWatch (with swipe + shortlist + drag handle) ───────────
 function WatchCard({ item, context, dismissed, onDismiss, shortlistMap, onShortlistToggle, addedBy, currentPerson }) {
+  const { streamingServiceIds: MY_SERVICE_IDS } = useFamily();
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: item.id });
 
   if (dismissed) return null;
@@ -356,6 +332,7 @@ function RotationBadge({ rotation, onSkip, skipping }) {
 // ── Main page ─────────────────────────────────────────────────────────────────
 export default function WhatToWatch() {
   const { currentPerson } = usePerson();
+  const { contexts: CONTEXTS, memberNames: PEOPLE, streamingServiceIds: MY_SERVICE_IDS } = useFamily();
   const [context, setContext] = useState('family');
   const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(false);

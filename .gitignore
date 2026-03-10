@@ -33,6 +33,9 @@ npm-debug.log*
 # Claude Code local settings
 .claude/settings.local.json
 
+# Family config (personal — use family.config.example.json as template)
+family.config.json
+
 # Personal data files (not for public repo)
 seed-data/final_consolidated.json
 HANDOFF.md

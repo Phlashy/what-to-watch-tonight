@@ -5,29 +5,24 @@ const db = require('../db');
 
 const anthropic = new Anthropic(); // reads ANTHROPIC_API_KEY from env
 
-const ROTATION = ['Davin', 'Arianne', 'Nupur', 'Gordon'];
-
 // --- System prompt ---
 
-function buildSystemPrompt(person) {
-  return `You are the Movie Night Assistant for the Casey family. You're friendly, concise, and helpful.
+function buildSystemPrompt(person, config) {
+  const memberList = config.members.map(m => `${m.name} (${m.role})`).join(', ');
+  const rotationStr = config.rotation.join(' → ');
+  const listDescriptions = config.lists.map(l => `- ${l.name}: ${l.displayName}`).join('\n');
+  const memberNames = config.members.map(m => m.name).join(', ');
 
-The family members are: Gordon (dad), Nupur (mom), Arianne (daughter), Davin (son).
-Family Movie Night rotation order: Davin → Arianne → Nupur → Gordon (repeats).
+  return `You are the Movie Night Assistant for the ${config.familyName} family. You're friendly, concise, and helpful.
+
+The family members are: ${memberList}.
+Family Movie Night rotation order: ${rotationStr} (repeats).
 
 You are currently talking to: ${person || 'an unknown family member'}.
 Today's date: ${new Date().toISOString().split('T')[0]}.
 
 Lists in the system:
-- family_to_watch: Family Movie Night watchlist
-- with_nupur: Gordon & Nupur date night
-- adult_movies: Adult movies (Gordon & Nupur)
-- adult_shows: Adult TV shows
-- solo_gordon: Solo Gordon watchlist
-- arianne_100_family: Arianne's 100 family movies
-- davin_gordon_shows: Davin & Gordon shows
-- christmas: Christmas movies
-- casey_brothers_recs: Casey brothers recommendations
+${listDescriptions}
 
 CRITICAL RULES:
 - You MUST use tools for EVERY question about the family's movies, shows, viewings, ratings, or lists. NEVER answer from your own knowledge.
@@ -76,7 +71,7 @@ const tools = [
     input_schema: {
       type: 'object',
       properties: {
-        person: { type: 'string', description: 'Filter by person name (Gordon, Nupur, Arianne, Davin)' },
+        person: { type: 'string', description: 'Filter by person name' },
         from_date: { type: 'string', description: 'Start date (YYYY-MM-DD)' },
         to_date: { type: 'string', description: 'End date (YYYY-MM-DD)' },
         search: { type: 'string', description: 'Search by title name' },
@@ -88,11 +83,11 @@ const tools = [
   },
   {
     name: 'get_list_items',
-    description: 'Get all items from a specific list. Use list name like "family_to_watch", "with_nupur", etc.',
+    description: 'Get all items from a specific list by its internal name.',
     input_schema: {
       type: 'object',
       properties: {
-        list_name: { type: 'string', description: 'Internal list name (e.g. family_to_watch, with_nupur, adult_movies, solo_gordon, christmas, etc.)' },
+        list_name: { type: 'string', description: 'Internal list name (see system prompt for available lists)' },
       },
       required: ['list_name'],
     },
@@ -108,7 +103,7 @@ const tools = [
     input_schema: {
       type: 'object',
       properties: {
-        person: { type: 'string', description: 'Person name (Gordon, Nupur, Arianne, Davin)' },
+        person: { type: 'string', description: 'Person name (see system prompt for family members)' },
       },
       required: ['person'],
     },
@@ -347,7 +342,8 @@ function toolGetTopGenres({ person, limit = 10 }) {
     .map(([genre, count]) => ({ genre, count }));
 }
 
-function toolGetFamilyRotation() {
+function toolGetFamilyRotation(input, config) {
+  const rotation = config.rotation;
   const override = db.prepare("SELECT value FROM settings WHERE key = 'family_rotation_next_override'").get();
   const lastChooser = db.prepare(`
     SELECT vp.person FROM viewings v JOIN viewing_people vp ON v.id = vp.viewing_id
@@ -358,12 +354,12 @@ function toolGetFamilyRotation() {
   if (override) {
     nextChooser = override.value;
   } else if (lastChooser) {
-    const idx = ROTATION.indexOf(lastChooser.person);
-    nextChooser = ROTATION[(idx + 1) % ROTATION.length];
+    const idx = rotation.indexOf(lastChooser.person);
+    nextChooser = rotation[(idx + 1) % rotation.length];
   } else {
-    nextChooser = ROTATION[0];
+    nextChooser = rotation[0];
   }
-  return { next_chooser: nextChooser, rotation: ROTATION, last_chooser: lastChooser?.person || null };
+  return { next_chooser: nextChooser, rotation, last_chooser: lastChooser?.person || null };
 }
 
 function toolAddToList({ title_id, list_name, added_by }) {
@@ -391,7 +387,7 @@ function toolRemoveFromList({ title_id, list_name }) {
 
 // --- Tool dispatch ---
 
-function executeToolCall(name, input) {
+function executeToolCall(name, input, config) {
   try {
     switch (name) {
       case 'search_titles': return toolSearchTitles(input);
@@ -402,7 +398,7 @@ function executeToolCall(name, input) {
       case 'get_person_stats': return toolGetPersonStats(input);
       case 'get_top_directors': return toolGetTopDirectors(input);
       case 'get_top_genres': return toolGetTopGenres(input);
-      case 'get_family_rotation': return toolGetFamilyRotation(input);
+      case 'get_family_rotation': return toolGetFamilyRotation(input, config);
       case 'add_to_list': return toolAddToList(input);
       case 'remove_from_list': return toolRemoveFromList(input);
       default: return { error: `Unknown tool: ${name}` };
@@ -421,6 +417,7 @@ router.post('/', async (req, res) => {
   }
 
   const { messages, person } = req.body;
+  const config = req.app.locals.familyConfig;
   if (!messages || !Array.isArray(messages)) {
     return res.status(400).json({ error: 'messages array required' });
   }
@@ -434,7 +431,7 @@ router.post('/', async (req, res) => {
     let response = await anthropic.messages.create({
       model: 'claude-haiku-4-5-20251001',
       max_tokens: 1024,
-      system: buildSystemPrompt(person),
+      system: buildSystemPrompt(person, config),
       tools,
       messages: anthropicMessages,
     });
@@ -448,7 +445,7 @@ router.post('/', async (req, res) => {
       const toolResults = [];
       for (const block of assistantContent) {
         if (block.type === 'tool_use') {
-          const result = executeToolCall(block.name, block.input);
+          const result = executeToolCall(block.name, block.input, config);
           toolResults.push({
             type: 'tool_result',
             tool_use_id: block.id,
@@ -462,7 +459,7 @@ router.post('/', async (req, res) => {
       response = await anthropic.messages.create({
         model: 'claude-haiku-4-5-20251001',
         max_tokens: 1024,
-        system: buildSystemPrompt(person),
+        system: buildSystemPrompt(person, config),
         tools,
         messages: anthropicMessages,
       });

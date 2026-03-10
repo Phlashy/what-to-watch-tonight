@@ -1,12 +1,10 @@
 import { useState } from 'react';
 import { usePerson } from '../context/PersonContext';
-import PixelAvatar, { getAvatarStyle } from './PixelAvatar';
-
-const FAMILY = ['Gordon', 'Nupur', 'Arianne', 'Davin'];
-
-export { getAvatarStyle };
+import { useFamily } from '../context/FamilyContext';
+import PixelAvatar from './PixelAvatar';
 
 export default function PersonPicker() {
+  const { memberNames } = useFamily();
   const { currentPerson, setCurrentPerson, showPicker, closePicker } = usePerson();
   const [guestName, setGuestName] = useState('');
 
@@ -29,7 +27,7 @@ export default function PersonPicker() {
 
         {/* Family members */}
         <div className="grid grid-cols-2 gap-3 mb-6">
-          {FAMILY.map(name => (
+          {memberNames.map(name => (
               <button
                 key={name}
                 onClick={() => setCurrentPerson(name)}

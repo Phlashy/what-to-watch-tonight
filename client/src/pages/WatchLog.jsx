@@ -1,8 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { Link } from 'react-router-dom';
 import LogViewing from '../components/LogViewing';
-
-const PEOPLE = ['Gordon', 'Nupur', 'Arianne', 'Davin', 'Julian'];
+import { useFamily } from '../context/FamilyContext';
 
 function ViewingRow({ v }) {
   const people = (() => { try { return JSON.parse(v.people || '[]'); } catch { return []; } })();
@@ -60,6 +59,7 @@ function ViewingRow({ v }) {
 }
 
 export default function WatchLog() {
+  const { allPeople: PEOPLE } = useFamily();
   const [viewings, setViewings] = useState([]);
   const [loading, setLoading] = useState(false);
   const [search, setSearch] = useState('');

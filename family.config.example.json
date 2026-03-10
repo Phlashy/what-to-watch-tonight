@@ -1,0 +1,46 @@
+{
+  "familyName": "Example",
+  "members": [
+    {
+      "name": "Alice",
+      "role": "parent",
+      "aliases": ["Alice"],
+      "color": "#2563eb"
+    },
+    {
+      "name": "Bob",
+      "role": "parent",
+      "aliases": ["Bob"],
+      "color": "#e11d48"
+    },
+    {
+      "name": "Charlie",
+      "role": "child",
+      "aliases": ["Charlie"],
+      "color": "#9333ea"
+    },
+    {
+      "name": "Diana",
+      "role": "child",
+      "aliases": ["Diana", "Di"],
+      "color": "#16a34a"
+    }
+  ],
+  "guests": [],
+  "rotation": ["Diana", "Charlie", "Bob", "Alice"],
+  "contexts": [
+    { "id": "family",    "label": "Family",    "emoji": "\ud83d\udc68\u200d\ud83d\udc69\u200d\ud83d\udc67\u200d\ud83d\udc66", "subtitle": "Movie Night",    "lists": ["family_to_watch"] },
+    { "id": "date",      "label": "Date",      "emoji": "\ud83d\udc91",                                                        "subtitle": "Date Night",     "lists": ["date_night"] },
+    { "id": "kids",      "label": "Kids",      "emoji": "\ud83c\udfac",                                                        "subtitle": "Kids' Picks",    "lists": ["kids_picks"] },
+    { "id": "solo",      "label": "Solo",      "emoji": "\ud83c\udfad",                                                        "subtitle": "Solo",           "lists": ["solo"] },
+    { "id": "christmas", "label": "Xmas",      "emoji": "\ud83c\udf84",                                                        "subtitle": "Christmas",      "lists": ["christmas"] }
+  ],
+  "lists": [
+    { "name": "family_to_watch", "displayName": "Family Movie Night", "description": "Family picks" },
+    { "name": "date_night",      "displayName": "Date Night",         "description": "For date nights" },
+    { "name": "kids_picks",      "displayName": "Kids' Picks",        "description": "Kids' watchlist" },
+    { "name": "solo",            "displayName": "Solo",               "description": "Solo viewing" },
+    { "name": "christmas",       "displayName": "Christmas",          "description": "Holiday movies" }
+  ],
+  "streamingServiceIds": [8, 119, 337, 350]
+}

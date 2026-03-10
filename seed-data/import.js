@@ -25,31 +25,34 @@ db.exec(migrationSql);
 
 const seedData = require('./final_consolidated.json');
 
+// ─── Load family config ──────────────────────────────────────────────────────
+const configPath = path.join(__dirname, '../family.config.json');
+const exampleConfigPath = path.join(__dirname, '../family.config.example.json');
+const familyConfig = JSON.parse(
+  fs.readFileSync(fs.existsSync(configPath) ? configPath : exampleConfigPath, 'utf8')
+);
+
 // ─── Lists ────────────────────────────────────────────────────────────────────
-const listDefs = [
-  { name: 'family_to_watch',    display_name: 'Family Movie Night', description: 'Friday night family picks' },
-  { name: 'with_nupur',         display_name: 'Me + Nupur',         description: 'For watching with Nupur' },
-  { name: 'adult_movies',       display_name: 'Adult Movies',       description: 'Movies for adult viewing' },
-  { name: 'adult_shows',        display_name: 'Adult Shows',        description: 'Shows for adult viewing' },
-  { name: 'solo_gordon',        display_name: 'Solo Gordon',        description: 'Gordon solo picks' },
-  { name: 'arianne_100_family', display_name: "Arianne's 100",      description: "Arianne's family movie project" },
-  { name: 'davin_gordon_shows', display_name: 'Me + Davin',         description: 'Shows to watch with Davin' },
-  { name: 'christmas',          display_name: 'Christmas',          description: 'Christmas picks' },
-  { name: 'casey_brothers_recs',display_name: 'Casey Brothers',     description: 'Recs from the Casey brothers' },
-];
+const listDefs = familyConfig.lists.map(l => ({
+  name: l.name,
+  display_name: l.displayName,
+  description: l.description || '',
+}));
 
 const insertList = db.prepare('INSERT OR IGNORE INTO lists (name, display_name, description) VALUES (?, ?, ?)');
 for (const l of listDefs) insertList.run(l.name, l.display_name, l.description);
 console.log(`✓ Lists (${listDefs.length})`);
 
 // ─── People ───────────────────────────────────────────────────────────────────
-const peopleDefs = [
-  { name: 'Gordon',  display_name: 'Gordon',  aliases: '["Gordon"]' },
-  { name: 'Nupur',   display_name: 'Nupur',   aliases: '["Nupur","Mitu","Mummy","Mum"]' },
-  { name: 'Arianne', display_name: 'Arianne', aliases: '["Arianne","Ari"]' },
-  { name: 'Davin',   display_name: 'Davin',   aliases: '["Davin"]' },
-  { name: 'Julian',  display_name: 'Julian',  aliases: '["Julian"]' },
-];
+const allPeople = [...familyConfig.members.map(m => m.name), ...(familyConfig.guests || [])];
+const peopleDefs = allPeople.map(name => {
+  const member = familyConfig.members.find(m => m.name === name);
+  return {
+    name,
+    display_name: name,
+    aliases: JSON.stringify(member?.aliases || [name]),
+  };
+});
 const insertPerson = db.prepare('INSERT OR IGNORE INTO people (name, display_name, aliases) VALUES (?, ?, ?)');
 for (const p of peopleDefs) insertPerson.run(p.name, p.display_name, p.aliases);
 console.log(`✓ People (${peopleDefs.length})`);
@@ -122,7 +125,7 @@ const insertViewingsTx = db.transaction(() => {
 
     // For family movie nights, add the whole family as viewers
     if ((entry.tags || []).includes('family_movie_night')) {
-      for (const member of ['Gordon', 'Nupur', 'Arianne', 'Davin']) {
+      for (const member of familyConfig.members.map(m => m.name)) {
         if (!choosers.includes(member)) {
           insertVP.run(viewingId, member, 'viewer');
         }

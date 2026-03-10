@@ -3,36 +3,7 @@ import { useParams, Link, useNavigate } from 'react-router-dom';
 import LogViewing from '../components/LogViewing';
 import TMDBPicker from '../components/TMDBPicker';
 import { usePerson } from '../context/PersonContext';
-
-const PEOPLE = ['Gordon', 'Nupur', 'Arianne', 'Davin', 'Julian'];
-
-// Map list names to shortlist contexts
-const LIST_TO_CONTEXT = {
-  family_to_watch: 'family',
-  with_nupur: 'nupur',
-  adult_movies: 'nupur',
-  arianne_100_family: 'arianne',
-  davin_gordon_shows: 'davin',
-  solo_gordon: 'solo',
-  casey_brothers_recs: 'solo',
-  adult_shows: 'solo',
-  christmas: 'christmas',
-};
-
-// Provider IDs for services the family subscribes to (verified against TMDB CA region)
-const MY_SERVICE_IDS = new Set([
-  8,    // Netflix
-  1796, // Netflix Standard with Ads
-  119,  // Amazon Prime Video
-  2100, // Amazon Prime Video with Ads
-  337,  // Disney Plus
-  11,   // MUBI
-  314,  // CBC Gem
-  73,   // Tubi TV
-  538,  // Plex
-  2,    // Apple TV Store (iTunes purchases)
-  350,  // Apple TV Plus
-]);
+import { useFamily } from '../context/FamilyContext';
 
 function relativeTime(isoString) {
   if (!isoString) return '';
@@ -49,6 +20,7 @@ function relativeTime(isoString) {
 }
 
 function ViewingItem({ v, onDelete, onSaved }) {
+  const { allPeople: PEOPLE } = useFamily();
   const [editing, setEditing] = useState(false);
   const [saving, setSaving] = useState(false);
 
@@ -421,6 +393,7 @@ function AddToCollectionForm({ onSave, onClose, saving }) {
 }
 
 export default function TitleDetail() {
+  const { allPeople: PEOPLE, listToContext: LIST_TO_CONTEXT, streamingServiceIds: MY_SERVICE_IDS } = useFamily();
   const { id } = useParams();
   const navigate = useNavigate();
   const [title, setTitle] = useState(null);
@@ -668,7 +641,7 @@ export default function TitleDetail() {
                     </div>
                     {editingAddedBy === l.list_item_id && (
                       <div className="mt-1.5 bg-slate-800 border border-slate-700 rounded-xl p-2 shadow-xl flex flex-wrap gap-1.5">
-                        {['Gordon', 'Nupur', 'Arianne', 'Davin'].map(person => {
+                        {PEOPLE.map(person => {
                           const isSelected = currentPeople.includes(person);
                           return (
                             <button

@@ -1,20 +1,11 @@
 import { useState, useEffect } from 'react';
 import { usePerson } from '../context/PersonContext';
-
-const LIST_OPTIONS = [
-  { name: 'family_to_watch', label: 'Family Movie Night' },
-  { name: 'with_nupur', label: 'Me + Nupur' },
-  { name: 'adult_movies', label: 'Adult Movies' },
-  { name: 'adult_shows', label: 'Adult Shows' },
-  { name: 'solo_gordon', label: 'Solo Gordon' },
-  { name: 'arianne_100_family', label: "Arianne's 100" },
-  { name: 'davin_gordon_shows', label: 'Me + Davin' },
-  { name: 'christmas', label: 'Christmas' },
-  { name: 'casey_brothers_recs', label: 'Casey Brothers' },
-];
+import { useFamily } from '../context/FamilyContext';
 
 export default function QuickAdd({ onClose, onSaved }) {
   const { currentPerson } = usePerson();
+  const { lists } = useFamily();
+  const LIST_OPTIONS = lists.map(l => ({ name: l.name, label: l.displayName }));
   const [query, setQuery] = useState('');
   const [tmdbResults, setTmdbResults] = useState([]);
   const [selectedTmdb, setSelectedTmdb] = useState(null);

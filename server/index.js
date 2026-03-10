@@ -6,11 +6,29 @@ const os = require('os');
 const path = require('path');
 const fs = require('fs');
 
+// Load family config (fall back to example if personal config doesn't exist)
+const configPath = path.join(__dirname, '../family.config.json');
+const exampleConfigPath = path.join(__dirname, '../family.config.example.json');
+const familyConfig = JSON.parse(
+  fs.readFileSync(fs.existsSync(configPath) ? configPath : exampleConfigPath, 'utf8')
+);
+
+// Build context→lists map from config
+const contextListMap = {};
+for (const ctx of familyConfig.contexts) {
+  contextListMap[ctx.id] = ctx.lists;
+}
+
 const app = express();
 const PORT = process.env.PORT || 3001;
 
+app.locals.familyConfig = familyConfig;
+
 app.use(cors());
 app.use(express.json());
+
+// Family config endpoint
+app.get('/api/config', (req, res) => res.json(familyConfig));
 
 // Routes
 app.use('/api/titles', require('./routes/titles'));
@@ -25,15 +43,6 @@ app.use('/api/chat', require('./routes/chat'));
 app.get('/api/what-to-watch/:context', (req, res) => {
   const db = require('./db');
   const { context } = req.params;
-
-  const contextListMap = {
-    family: ['family_to_watch'],
-    nupur: ['with_nupur', 'adult_movies'],
-    arianne: ['arianne_100_family'],
-    davin: ['davin_gordon_shows'],
-    solo: ['solo_gordon', 'casey_brothers_recs', 'adult_shows'],
-    christmas: ['christmas'],
-  };
 
   const listNames = contextListMap[context];
   if (!listNames) return res.status(400).json({ error: 'Unknown context' });
@@ -75,7 +84,7 @@ app.get('/api/what-to-watch/:context', (req, res) => {
   res.json(items);
 });
 
-const ROTATION = ['Davin', 'Arianne', 'Nupur', 'Gordon'];
+const ROTATION = familyConfig.rotation;
 
 function getRotationState(db) {
   const override = db.prepare("SELECT value FROM settings WHERE key = 'family_rotation_next_override'").get();

@@ -1,11 +1,11 @@
 import { useState, useEffect } from 'react';
 import { usePerson } from '../context/PersonContext';
-
-const PEOPLE = ['Gordon', 'Nupur', 'Arianne', 'Davin', 'Julian'];
+import { useFamily } from '../context/FamilyContext';
 const COMMON_TAGS = ['family_movie_night', 'solo', 'cinema', 'plane', 'mubi', 'viff', 'christmas', 'birthday', 'curacao', 'unfinished'];
 
 export default function LogViewing({ titleId, titleName, onClose, onSaved }) {
   const { currentPerson } = usePerson();
+  const { allPeople: PEOPLE } = useFamily();
   const [form, setForm] = useState(() => ({
     date: new Date().toISOString().split('T')[0],
     date_precision: 'day',
