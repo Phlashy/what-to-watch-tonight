@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { api } from '../api';
 import { usePerson } from '../context/PersonContext';
 import { useFamily } from '../context/FamilyContext';
 
@@ -18,7 +19,7 @@ export default function QuickAdd({ onClose, onSaved }) {
   useEffect(() => {
     if (query.length < 2) { setTmdbResults([]); return; }
     const timer = setTimeout(async () => {
-      const res = await fetch(`/api/tmdb/search?q=${encodeURIComponent(query)}`);
+      const res = await api(`/api/tmdb/search?q=${encodeURIComponent(query)}`);
       const data = await res.json();
       setTmdbResults(Array.isArray(data) ? data : []);
     }, 400);
@@ -34,7 +35,7 @@ export default function QuickAdd({ onClose, onSaved }) {
     setSaving(true);
     try {
       // Create/enrich the title
-      const titleRes = await fetch('/api/titles', {
+      const titleRes = await api('/api/titles', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -45,7 +46,7 @@ export default function QuickAdd({ onClose, onSaved }) {
       const titleData = await titleRes.json();
 
       // Enrich with TMDB
-      await fetch(`/api/tmdb/enrich/${titleData.id}`, {
+      await api(`/api/tmdb/enrich/${titleData.id}`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ tmdb_id: selectedTmdb.id }),
@@ -53,7 +54,7 @@ export default function QuickAdd({ onClose, onSaved }) {
 
       // Add to lists
       for (const listName of selectedLists) {
-        await fetch(`/api/lists/${listName}/items`, {
+        await api(`/api/lists/${listName}/items`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
@@ -73,7 +74,7 @@ export default function QuickAdd({ onClose, onSaved }) {
   }
 
   return (
-    <div className="fixed inset-0 bg-black/70 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4">
+    <div className="fixed inset-0 bg-black/70 z-[60] flex items-end sm:items-center justify-center p-0 sm:p-4">
       <div className="bg-slate-900 rounded-t-2xl sm:rounded-2xl w-full sm:max-w-lg max-h-[90vh] overflow-y-auto">
         <div className="px-4 pt-4 pb-modal-safe">
           <div className="flex items-center justify-between mb-4">

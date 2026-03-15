@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
+import { api } from '../api';
 
 const FORMAT_LABELS = { dvd: 'DVD', bluray: 'Blu-ray', digital: 'Digital' };
 
@@ -13,7 +14,7 @@ export default function Collection() {
   async function loadItems() {
     setLoading(true);
     try {
-      const res = await fetch('/api/collection');
+      const res = await api('/api/collection');
       setItems(await res.json());
     } finally {
       setLoading(false);

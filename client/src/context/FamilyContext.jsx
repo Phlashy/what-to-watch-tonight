@@ -1,4 +1,5 @@
 import { createContext, useContext, useState, useEffect, useMemo } from 'react';
+import { api } from '../api';
 
 const FamilyContext = createContext(null);
 
@@ -6,7 +7,7 @@ export function FamilyProvider({ children }) {
   const [config, setConfig] = useState(null);
 
   useEffect(() => {
-    fetch('/api/config')
+    api('/api/config')
       .then(r => r.json())
       .then(setConfig)
       .catch(err => console.error('Failed to load family config:', err));

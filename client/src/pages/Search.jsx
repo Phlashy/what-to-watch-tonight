@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { Link } from 'react-router-dom';
+import { api } from '../api';
 
 function SearchResult({ t }) {
   const genres = (() => { try { return JSON.parse(t.genre || '[]'); } catch { return []; } })();
@@ -62,7 +63,7 @@ export default function Search() {
 
   useEffect(() => {
     inputRef.current?.focus();
-    fetch('/api/titles?limit=1').then(r => r.json()).then(d => setTotalTitles(d.total)).catch(() => {});
+    api('/api/titles?limit=1').then(r => r.json()).then(d => setTotalTitles(d.total)).catch(() => {});
   }, []);
 
   useEffect(() => {
@@ -78,7 +79,7 @@ export default function Search() {
   async function doSearch() {
     setLoading(true);
     try {
-      const res = await fetch(`/api/titles?q=${encodeURIComponent(query)}&limit=50`);
+      const res = await api(`/api/titles?q=${encodeURIComponent(query)}&limit=50`);
       const data = await res.json();
       setResults(data.titles || []);
       setTotal(data.total || 0);

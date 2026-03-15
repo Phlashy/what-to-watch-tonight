@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
+import { api } from '../api';
 import QuickAdd from '../components/QuickAdd';
 
 const LIST_ICONS = {
@@ -21,10 +22,10 @@ export default function Lists() {
   const [collectionCount, setCollectionCount] = useState(null);
 
   useEffect(() => {
-    fetch('/api/lists')
+    api('/api/lists')
       .then(r => r.json())
       .then(data => { setLists(data); setLoading(false); });
-    fetch('/api/collection')
+    api('/api/collection')
       .then(r => r.json())
       .then(items => setCollectionCount(items.length))
       .catch(() => {});
@@ -88,7 +89,7 @@ export default function Lists() {
         )}
       </div>
 
-      {showAdd && <QuickAdd onClose={() => setShowAdd(false)} onSaved={() => { setShowAdd(false); fetch('/api/lists').then(r => r.json()).then(setLists); }} />}
+      {showAdd && <QuickAdd onClose={() => setShowAdd(false)} onSaved={() => { setShowAdd(false); api('/api/lists').then(r => r.json()).then(setLists); }} />}
     </div>
   );
 }

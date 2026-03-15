@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { api } from '../api';
 
 export default function TMDBPicker({ titleId, initialQuery = '', titleType = 'movie', onClose, onEnriched }) {
   const [query, setQuery] = useState(initialQuery);
@@ -16,7 +17,7 @@ export default function TMDBPicker({ titleId, initialQuery = '', titleType = 'mo
   async function search() {
     setLoading(true);
     try {
-      const res = await fetch(`/api/tmdb/search?q=${encodeURIComponent(query)}&type=${type}`);
+      const res = await api(`/api/tmdb/search?q=${encodeURIComponent(query)}&type=${type}`);
       const data = await res.json();
       setResults(Array.isArray(data) ? data : []);
     } finally {
@@ -27,7 +28,7 @@ export default function TMDBPicker({ titleId, initialQuery = '', titleType = 'mo
   async function pick(tmdbResult) {
     setEnriching(tmdbResult.id);
     try {
-      const res = await fetch(`/api/tmdb/enrich/${titleId}`, {
+      const res = await api(`/api/tmdb/enrich/${titleId}`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ tmdb_id: tmdbResult.id, tmdb_type: type }),
@@ -41,7 +42,7 @@ export default function TMDBPicker({ titleId, initialQuery = '', titleType = 'mo
   }
 
   return (
-    <div className="fixed inset-0 bg-black/75 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4">
+    <div className="fixed inset-0 bg-black/75 z-[60] flex items-end sm:items-center justify-center p-0 sm:p-4">
       <div className="bg-slate-900 rounded-t-2xl sm:rounded-2xl w-full sm:max-w-lg max-h-[90vh] flex flex-col">
         {/* Header */}
         <div className="px-4 pt-4 pb-2 border-b border-slate-800">

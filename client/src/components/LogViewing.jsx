@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { api } from '../api';
 import { usePerson } from '../context/PersonContext';
 import { useFamily } from '../context/FamilyContext';
 const COMMON_TAGS = ['family_movie_night', 'solo', 'cinema', 'plane', 'mubi', 'viff', 'christmas', 'birthday', 'curacao', 'unfinished'];
@@ -29,13 +30,13 @@ export default function LogViewing({ titleId, titleName, onClose, onSaved }) {
     if (!titleId && searchQuery.length > 1) {
       const timer = setTimeout(async () => {
         // Local DB search
-        const res = await fetch(`/api/titles?q=${encodeURIComponent(searchQuery)}&limit=8`);
+        const res = await api(`/api/titles?q=${encodeURIComponent(searchQuery)}&limit=8`);
         const data = await res.json();
         setSearchResults(data.titles || []);
 
         // TMDB search (find titles not in our DB)
         try {
-          const tmdbRes = await fetch(`/api/tmdb/search?q=${encodeURIComponent(searchQuery)}&type=multi`);
+          const tmdbRes = await api(`/api/tmdb/search?q=${encodeURIComponent(searchQuery)}&type=multi`);
           const tmdbData = await tmdbRes.json();
           setTmdbResults(Array.isArray(tmdbData) ? tmdbData : []);
         } catch {
@@ -69,7 +70,7 @@ export default function LogViewing({ titleId, titleName, onClose, onSaved }) {
     setCreatingTitle(true);
     try {
       // Create the title in the DB
-      const titleRes = await fetch('/api/titles', {
+      const titleRes = await api('/api/titles', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -80,7 +81,7 @@ export default function LogViewing({ titleId, titleName, onClose, onSaved }) {
       const titleData = await titleRes.json();
 
       // Enrich with TMDB metadata
-      await fetch(`/api/tmdb/enrich/${titleData.id}`, {
+      await api(`/api/tmdb/enrich/${titleData.id}`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ tmdb_id: tmdbItem.id }),
@@ -99,7 +100,7 @@ export default function LogViewing({ titleId, titleName, onClose, onSaved }) {
     if (!selectedTitleId) return;
     setSaving(true);
     try {
-      const res = await fetch('/api/viewings', {
+      const res = await api('/api/viewings', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -125,7 +126,7 @@ export default function LogViewing({ titleId, titleName, onClose, onSaved }) {
   }
 
   return (
-    <div className="fixed inset-0 bg-black/70 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4">
+    <div className="fixed inset-0 bg-black/70 z-[60] flex items-end sm:items-center justify-center p-0 sm:p-4">
       <div className="bg-slate-900 rounded-t-2xl sm:rounded-2xl w-full sm:max-w-lg max-h-[90vh] overflow-y-auto">
         <div className="px-4 pt-4 pb-modal-safe">
           <div className="flex items-center justify-between mb-4">

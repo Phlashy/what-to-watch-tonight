@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { Link } from 'react-router-dom';
+import { api } from '../api';
 import LogViewing from '../components/LogViewing';
 import QuickAdd from '../components/QuickAdd';
 import { usePerson } from '../context/PersonContext';
@@ -357,7 +358,7 @@ export default function WhatToWatch() {
     setDismissed(new Set());
     setPersonFilter(null);
     try {
-      const res = await fetch(`/api/what-to-watch/${context}`);
+      const res = await api(`/api/what-to-watch/${context}`);
       const data = await res.json();
       const list = Array.isArray(data) ? data : [];
       setItems(list);
@@ -376,7 +377,7 @@ export default function WhatToWatch() {
   }
 
   async function loadRotation() {
-    const res = await fetch('/api/family-rotation');
+    const res = await api('/api/family-rotation');
     const data = await res.json();
     setRotation(data);
   }
@@ -384,7 +385,7 @@ export default function WhatToWatch() {
   async function handleSkip() {
     setSkipping(true);
     try {
-      const res = await fetch('/api/family-rotation/skip', { method: 'POST' });
+      const res = await api('/api/family-rotation/skip', { method: 'POST' });
       const data = await res.json();
       setRotation(data);
     } finally {
@@ -393,7 +394,7 @@ export default function WhatToWatch() {
   }
 
   async function handleShortlistToggle(titleId, person) {
-    await fetch('/api/shortlists', {
+    await api('/api/shortlists', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ title_id: titleId, person, context }),
@@ -451,7 +452,7 @@ export default function WhatToWatch() {
     // Persist — list name doesn't matter for the query, any valid name works
     const order = reordered.map(i => i.list_item_id).filter(Boolean);
     if (order.length) {
-      fetch(`/api/lists/${context}/items/reorder`, {
+      api(`/api/lists/${context}/items/reorder`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ order }),

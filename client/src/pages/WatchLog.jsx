@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { Link } from 'react-router-dom';
+import { api } from '../api';
 import LogViewing from '../components/LogViewing';
 import { useFamily } from '../context/FamilyContext';
 
@@ -93,7 +94,7 @@ export default function WatchLog() {
     if (sort !== 'date') params.set('sort', sort);
 
     try {
-      const res = await fetch(`/api/viewings?${params}`);
+      const res = await api(`/api/viewings?${params}`);
       const data = await res.json();
       const newViewings = data.viewings || [];
       setViewings(v => reset ? newViewings : [...v, ...newViewings]);

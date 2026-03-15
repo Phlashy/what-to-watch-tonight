@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
+import { api } from '../api';
 import LogViewing from '../components/LogViewing';
 import TMDBPicker from '../components/TMDBPicker';
 import { usePerson } from '../context/PersonContext';
@@ -65,7 +66,7 @@ function ViewingItem({ v, onDelete, onSaved }) {
   async function save() {
     setSaving(true);
     try {
-      await fetch(`/api/viewings/${v.id}`, {
+      await api(`/api/viewings/${v.id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -265,13 +266,13 @@ function AddToListSheet({ titleId, currentMemberships, onClose, onAdded }) {
   const membershipMap = Object.fromEntries((currentMemberships || []).map(l => [l.name, l.list_item_id]));
 
   useEffect(() => {
-    fetch('/api/lists').then(r => r.json()).then(setLists);
+    api('/api/lists').then(r => r.json()).then(setLists);
   }, []);
 
   async function addToList(listName) {
     setAdding(listName);
     try {
-      const res = await fetch(`/api/lists/${listName}/items`, {
+      const res = await api(`/api/lists/${listName}/items`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ title_id: titleId, added_by: currentPerson || null }),
@@ -290,7 +291,7 @@ function AddToListSheet({ titleId, currentMemberships, onClose, onAdded }) {
     if (!itemId) return;
     setRemoving(listName);
     try {
-      await fetch(`/api/lists/${listName}/items/${itemId}`, { method: 'DELETE' });
+      await api(`/api/lists/${listName}/items/${itemId}`, { method: 'DELETE' });
       setAdded(s => { const n = new Set(s); n.delete(listName); return n; });
       delete membershipMap[listName];
       onAdded?.();
@@ -300,7 +301,7 @@ function AddToListSheet({ titleId, currentMemberships, onClose, onAdded }) {
   }
 
   return (
-    <div className="fixed inset-0 bg-black/70 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4" onClick={onClose}>
+    <div className="fixed inset-0 bg-black/70 z-[60] flex items-end sm:items-center justify-center p-0 sm:p-4" onClick={onClose}>
       <div className="bg-slate-900 rounded-t-2xl sm:rounded-2xl w-full sm:max-w-sm" onClick={e => e.stopPropagation()}>
         <div className="px-4 pt-4 pb-modal-safe">
           <div className="flex items-center justify-between mb-4">
@@ -412,7 +413,7 @@ export default function TitleDetail() {
   useEffect(() => { loadTitle(); }, [id]);
 
   async function toggleShortlist(person, context) {
-    await fetch('/api/shortlists', {
+    await api('/api/shortlists', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ title_id: Number(id), person, context }),
@@ -434,7 +435,7 @@ export default function TitleDetail() {
   async function loadTitle() {
     setLoading(true);
     try {
-      const res = await fetch(`/api/titles/${id}`);
+      const res = await api(`/api/titles/${id}`);
       const data = await res.json();
       setTitle(data);
       // Load cached watch providers if available
@@ -453,7 +454,7 @@ export default function TitleDetail() {
   async function fetchWatchProviders(refresh = false) {
     setLoadingProviders(true);
     try {
-      const res = await fetch(`/api/tmdb/watch-providers/${id}${refresh ? '?refresh=true' : ''}`);
+      const res = await api(`/api/tmdb/watch-providers/${id}${refresh ? '?refresh=true' : ''}`);
       const data = await res.json();
       setWatchProviders(data.watch_providers);
       setWatchProvidersUpdatedAt(data.watch_providers_updated_at);
@@ -465,7 +466,7 @@ export default function TitleDetail() {
   async function addToCollection(format, platform, notes) {
     setAddingToCollection(true);
     try {
-      const res = await fetch('/api/collection', {
+      const res = await api('/api/collection', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ title_id: title.id, format, platform: platform || null, notes: notes || null }),
@@ -483,13 +484,13 @@ export default function TitleDetail() {
 
   async function removeFromCollection(collectionId) {
     if (!confirm('Remove from collection?')) return;
-    await fetch(`/api/collection/${collectionId}`, { method: 'DELETE' });
+    await api(`/api/collection/${collectionId}`, { method: 'DELETE' });
     loadTitle();
   }
 
   async function updateAddedBy(listName, listItemId, people) {
     const added_by = people.length ? people.join(',') : null;
-    await fetch(`/api/lists/${listName}/items/${listItemId}`, {
+    await api(`/api/lists/${listName}/items/${listItemId}`, {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ added_by }),
@@ -503,7 +504,7 @@ export default function TitleDetail() {
   }
 
   async function saveTitle(newName) {
-    await fetch(`/api/titles/${id}`, {
+    await api(`/api/titles/${id}`, {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ title: newName }),
@@ -513,7 +514,7 @@ export default function TitleDetail() {
 
   async function deleteViewing(viewingId) {
     if (!confirm('Delete this viewing?')) return;
-    await fetch(`/api/viewings/${viewingId}`, { method: 'DELETE' });
+    await api(`/api/viewings/${viewingId}`, { method: 'DELETE' });
     loadTitle();
   }
 
@@ -674,7 +675,7 @@ export default function TitleDetail() {
         {/* Where to Watch / Collection */}
         {(title.tmdb_id || title.collection?.length > 0) ? (
           <div>
-            {(watchProviders || title.collection?.length > 0) ? (
+            {(watchProviders || watchProvidersUpdatedAt || title.collection?.length > 0) ? (
               <div>
                 <div className="flex items-center justify-between mb-2">
                   <h3 className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Where to Watch</h3>
@@ -735,6 +736,9 @@ export default function TitleDetail() {
                       </div>
                     ))}
                   </div>
+                )}
+                {!watchProviders && watchProvidersUpdatedAt && (
+                  <p className="text-sm text-slate-500 italic">Not currently available for streaming in Canada</p>
                 )}
                 {watchProviders && (() => {
                   const stream = [...(watchProviders.flatrate || []), ...(watchProviders.free || [])];

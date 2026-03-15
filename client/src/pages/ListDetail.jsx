@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
+import { api } from '../api';
 import TitleCard from '../components/TitleCard';
 import QuickAdd from '../components/QuickAdd';
 
@@ -15,7 +16,7 @@ export default function ListDetail() {
   async function loadList() {
     setLoading(true);
     try {
-      const res = await fetch(`/api/lists/${name}/items`);
+      const res = await api(`/api/lists/${name}/items`);
       const d = await res.json();
       setData(d);
     } finally {
@@ -26,7 +27,7 @@ export default function ListDetail() {
   async function removeItem(itemId) {
     if (!confirm('Remove from list?')) return;
     setRemoving(itemId);
-    await fetch(`/api/lists/${name}/items/${itemId}`, { method: 'DELETE' });
+    await api(`/api/lists/${name}/items/${itemId}`, { method: 'DELETE' });
     setRemoving(null);
     loadList();
   }

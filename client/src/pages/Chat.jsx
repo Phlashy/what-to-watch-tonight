@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { Link } from 'react-router-dom';
+import { api } from '../api';
 import { usePerson } from '../context/PersonContext';
 
 const SUGGESTIONS = [
@@ -69,7 +70,7 @@ export default function Chat() {
     setLoading(true);
 
     try {
-      const res = await fetch('/api/chat', {
+      const res = await api('/api/chat', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ messages: newMessages, person: currentPerson }),

@@ -12,7 +12,7 @@ import Chat from './pages/Chat';
 
 export default function App() {
   return (
-    <BrowserRouter>
+    <BrowserRouter basename="/movie-night">
       <div className="min-h-screen bg-slate-950 text-slate-100">
         <Routes>
           <Route path="/" element={<WhatToWatch />} />
