@@ -13,7 +13,7 @@ Project-specific deployment notes for the Movie Night app on Angus Pi. For gener
 | Pi directory | `~/what-to-watch-tonight/` |
 | Database | `~/movie-night-data/movies.db` |
 | pm2 process | `movie-night` |
-| Nginx config | `/etc/nginx/sites-available/movie-night` |
+| Nginx config | `/etc/nginx/sites-available/anguspi` (shared config, `location /movie-night/` block) |
 | GitHub | https://github.com/Phlashy/what-to-watch-tonight |
 
 ---

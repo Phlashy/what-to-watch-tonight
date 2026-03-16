@@ -81,27 +81,30 @@ This avoids needing custom DNS entries on every device. The trade-off is each ap
 
 ### Port Allocation
 
-| App | Port | Status |
-|-----|------|--------|
-| Movie Night | 3001 | ✅ Running |
-| Personal Website | 3002 | 🔲 Planned |
-| Davin's Game | 3003 | 🔲 Planned |
+| App | Port | Type | Status |
+|-----|------|------|--------|
+| Movie Night | 3001 | Node.js (pm2) | ✅ Running |
+| Personal Website | N/A | Static (Nginx alias) | ✅ Running |
+| Davin's Game | 3002 | TBD | 🔲 Planned |
 
 ---
 
 ## Nginx Configuration
 
-Config files live in `/etc/nginx/sites-available/`, symlinked to `/etc/nginx/sites-enabled/`.
+**All apps share a single config file**: `/etc/nginx/sites-available/anguspi`, symlinked to `/etc/nginx/sites-enabled/anguspi`.
 
-### Current config: Movie Night
+> **Important**: Do NOT create separate config files per app with the same `server_name`. Nginx will only use the first `server` block and silently ignore the others, causing 404s. All `location` blocks must be in one `server` block.
 
-File: `/etc/nginx/sites-available/movie-night`
+### Current config
+
+File: `/etc/nginx/sites-available/anguspi`
 
 ```nginx
 server {
     listen 80;
     server_name anguspi.local;
 
+    # Movie Night (Node.js app)
     location /movie-night/ {
         proxy_pass http://127.0.0.1:3001/;
         proxy_http_version 1.1;
@@ -111,37 +114,51 @@ server {
         proxy_set_header X-Real-IP $remote_addr;
         proxy_cache_bypass $http_upgrade;
     }
+
+    # Personal Website (static site)
+    location /website/ {
+        alias /home/gordon/gc-website/;
+        index index.html;
+    }
 }
 ```
 
-> **Note the trailing `/` on `proxy_pass`** — this strips the `/movie-night/` prefix before forwarding to the app, so the app sees `/api/config` not `/movie-night/api/config`.
+> **Notes**:
+> - Trailing `/` on `proxy_pass` strips the path prefix — the app sees `/api/config` not `/movie-night/api/config`
+> - Use `alias` (not `root`) for static sites so the URL path maps correctly to the filesystem
+> - Nginx runs as `www-data` — needs `chmod 755` on every directory in the path to served files
 
 ### Adding a new app
 
-1. Create the config file:
+1. Edit the shared config:
 ```bash
-sudo nano /etc/nginx/sites-available/<app-name>
+sudo nano /etc/nginx/sites-available/anguspi
 ```
 
-2. Add a `location` block (can be in the existing `server` block or a new file):
+2. Add a new `location` block inside the existing `server { }`:
+
+For a **Node.js app**:
 ```nginx
-location /<app-path>/ {
-    proxy_pass http://127.0.0.1:<port>/;
-    proxy_http_version 1.1;
-    proxy_set_header Upgrade $http_upgrade;
-    proxy_set_header Connection 'upgrade';
-    proxy_set_header Host $host;
-    proxy_set_header X-Real-IP $remote_addr;
-    proxy_cache_bypass $http_upgrade;
-}
+    location /<app-path>/ {
+        proxy_pass http://127.0.0.1:<port>/;
+        proxy_http_version 1.1;
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection 'upgrade';
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_cache_bypass $http_upgrade;
+    }
 ```
 
-3. If it's a new file, symlink it:
-```bash
-sudo ln -s /etc/nginx/sites-available/<app-name> /etc/nginx/sites-enabled/
+For a **static site**:
+```nginx
+    location /<app-path>/ {
+        alias /home/gordon/<directory>/;
+        index index.html;
+    }
 ```
 
-4. Test and restart:
+3. Test and restart:
 ```bash
 sudo nginx -t && sudo systemctl restart nginx
 ```
