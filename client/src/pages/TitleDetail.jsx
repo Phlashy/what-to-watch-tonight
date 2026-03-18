@@ -257,10 +257,12 @@ function EditableTitle({ value, onSave }) {
 
 function AddToListSheet({ titleId, currentMemberships, onClose, onAdded }) {
   const { currentPerson } = usePerson();
+  const { memberNames } = useFamily();
   const [lists, setLists] = useState([]);
   const [adding, setAdding] = useState(null);
   const [added, setAdded] = useState(new Set((currentMemberships || []).map(l => l.name)));
   const [removing, setRemoving] = useState(null);
+  const [pickedBy, setPickedBy] = useState(currentPerson ? [currentPerson] : []);
 
   // Build a map of list name -> list_item_id for removal
   const membershipMap = Object.fromEntries((currentMemberships || []).map(l => [l.name, l.list_item_id]));
@@ -275,7 +277,7 @@ function AddToListSheet({ titleId, currentMemberships, onClose, onAdded }) {
       const res = await api(`/api/lists/${listName}/items`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ title_id: titleId, added_by: currentPerson || null }),
+        body: JSON.stringify({ title_id: titleId, added_by: pickedBy.length > 0 ? pickedBy.join(',') : (currentPerson || null) }),
       });
       if (res.ok || res.status === 409) {
         setAdded(s => new Set([...s, listName]));
@@ -309,6 +311,24 @@ function AddToListSheet({ titleId, currentMemberships, onClose, onAdded }) {
             <button onClick={onClose} className="text-slate-400 hover:text-white p-2">
               <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
             </button>
+          </div>
+          <div className="mb-4">
+            <label className="text-xs text-slate-400 font-medium mb-2 block">Picked by</label>
+            <div className="flex flex-wrap gap-1.5">
+              {memberNames.map(name => {
+                const isSelected = pickedBy.includes(name);
+                return (
+                  <button key={name} onClick={() => setPickedBy(prev =>
+                    isSelected ? prev.filter(p => p !== name) : [...prev, name]
+                  )}
+                    className={`px-3 py-1.5 rounded-full text-sm font-medium transition-colors ${
+                      isSelected ? 'bg-amber-500 text-black' : 'bg-slate-800 text-slate-300 hover:bg-slate-700'
+                    }`}>
+                    {name}
+                  </button>
+                );
+              })}
+            </div>
           </div>
           <div className="space-y-2">
             {lists.map(list => {

@@ -8,9 +8,10 @@ export default defineConfig({
     host: true,
     port: 3000,
     proxy: {
-      '/api': {
+      '/movie-night/api': {
         target: 'http://localhost:3001',
         changeOrigin: true,
+        rewrite: (path) => path.replace(/^\/movie-night/, ''),
       },
     },
   },

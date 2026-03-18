@@ -5,12 +5,13 @@ import { useFamily } from '../context/FamilyContext';
 
 export default function QuickAdd({ onClose, onSaved }) {
   const { currentPerson } = usePerson();
-  const { lists } = useFamily();
+  const { lists, memberNames } = useFamily();
   const LIST_OPTIONS = lists.map(l => ({ name: l.name, label: l.displayName }));
   const [query, setQuery] = useState('');
   const [tmdbResults, setTmdbResults] = useState([]);
   const [selectedTmdb, setSelectedTmdb] = useState(null);
   const [selectedLists, setSelectedLists] = useState([]);
+  const [pickedBy, setPickedBy] = useState(currentPerson ? [currentPerson] : []);
   const [streaming, setStreaming] = useState('');
   const [note, setNote] = useState('');
   const [saving, setSaving] = useState(false);
@@ -61,7 +62,7 @@ export default function QuickAdd({ onClose, onSaved }) {
             title_id: titleData.id,
             streaming_service: streaming || null,
             note: note || null,
-            added_by: currentPerson || null,
+            added_by: pickedBy.length > 0 ? pickedBy.join(',') : (currentPerson || null),
           }),
         });
       }
@@ -139,6 +140,26 @@ export default function QuickAdd({ onClose, onSaved }) {
                       {l.label}
                     </button>
                   ))}
+                </div>
+              </div>
+
+              {/* Picked by */}
+              <div className="mb-4">
+                <label className="text-xs text-slate-400 font-medium mb-2 block">Picked by</label>
+                <div className="flex flex-wrap gap-1.5">
+                  {memberNames.map(name => {
+                    const isSelected = pickedBy.includes(name);
+                    return (
+                      <button key={name} onClick={() => setPickedBy(prev =>
+                        isSelected ? prev.filter(p => p !== name) : [...prev, name]
+                      )}
+                        className={`px-3 py-1.5 rounded-full text-sm font-medium transition-colors ${
+                          isSelected ? 'bg-amber-500 text-black' : 'bg-slate-800 text-slate-300 hover:bg-slate-700'
+                        }`}>
+                        {name}
+                      </button>
+                    );
+                  })}
                 </div>
               </div>
 
