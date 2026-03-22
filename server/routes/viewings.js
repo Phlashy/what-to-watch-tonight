@@ -85,7 +85,7 @@ router.get('/', (req, res) => {
 
 // POST /api/viewings
 router.post('/', (req, res) => {
-  const { title_id, date, date_precision = 'day', rating, notes, tags = [], people = [] } = req.body;
+  const { title_id, date, date_precision = 'day', rating, notes, tags = [], people = [], picked_by } = req.body;
   if (!title_id) return res.status(400).json({ error: 'title_id required' });
 
   const result = db.prepare(`
@@ -97,6 +97,11 @@ router.post('/', (req, res) => {
 
   for (const p of people) {
     db.prepare('INSERT INTO viewing_people (viewing_id, person, role, rating) VALUES (?, ?, ?, ?)').run(viewingId, p.person, p.role || 'chooser', p.rating || null);
+  }
+
+  // Update added_by on list items for this title if picked_by was specified
+  if (picked_by) {
+    db.prepare('UPDATE list_items SET added_by = ? WHERE title_id = ?').run(picked_by, title_id);
   }
 
   // Remove from list_items if it was on family_to_watch and has family_movie_night tag

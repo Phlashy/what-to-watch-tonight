@@ -6,7 +6,8 @@ const COMMON_TAGS = ['family_movie_night', 'solo', 'cinema', 'plane', 'mubi', 'v
 
 export default function LogViewing({ titleId, titleName, onClose, onSaved }) {
   const { currentPerson } = usePerson();
-  const { allPeople: PEOPLE } = useFamily();
+  const { allPeople: PEOPLE, memberNames } = useFamily();
+  const [pickedBy, setPickedBy] = useState(currentPerson ? [currentPerson] : []);
   const [form, setForm] = useState(() => ({
     date: new Date().toISOString().split('T')[0],
     date_precision: 'day',
@@ -114,6 +115,7 @@ export default function LogViewing({ titleId, titleName, onClose, onSaved }) {
           notes: form.notes || null,
           tags: form.tags,
           people: form.people,
+          picked_by: pickedBy.length > 0 ? pickedBy.join(',') : (currentPerson || null),
         }),
       });
       if (res.ok) {
@@ -290,6 +292,28 @@ export default function LogViewing({ titleId, titleName, onClose, onSaved }) {
               ))}
             </div>
           </div>
+
+          {/* Picked by */}
+          {selectedTitleId && (
+            <div className="mb-4">
+              <label className="text-xs text-slate-400 font-medium mb-2 block">Picked by</label>
+              <div className="flex flex-wrap gap-1.5">
+                {memberNames.map(name => {
+                  const isSelected = pickedBy.includes(name);
+                  return (
+                    <button key={name} onClick={() => setPickedBy(prev =>
+                      isSelected ? prev.filter(p => p !== name) : [...prev, name]
+                    )}
+                      className={`px-3 py-1.5 rounded-full text-sm font-medium transition-colors ${
+                        isSelected ? 'bg-amber-500 text-black' : 'bg-slate-800 text-slate-300 hover:bg-slate-700'
+                      }`}>
+                      {name}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          )}
 
           {/* Notes */}
           <div className="mb-4">
