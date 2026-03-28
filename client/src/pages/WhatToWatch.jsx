@@ -5,6 +5,7 @@ import LogViewing from '../components/LogViewing';
 import QuickAdd from '../components/QuickAdd';
 import { usePerson } from '../context/PersonContext';
 import { useFamily } from '../context/FamilyContext';
+import { parseJSON } from '../utils';
 import {
   DndContext,
   closestCenter,
@@ -188,24 +189,20 @@ function WatchCard({ item, context, dismissed, onDismiss, shortlistMap, onShortl
     zIndex: isDragging ? 999 : undefined,
   };
 
-  const genres = (() => { try { return JSON.parse(item.genre || '[]'); } catch { return []; } })();
+  const genres = parseJSON(item.genre);
   const shortlistedBy = shortlistMap[item.id] || [];
   // Cached streaming provider icons (only show user's services)
   const myProviders = (() => {
-    try {
-      const wp = JSON.parse(item.watch_providers || 'null');
-      if (!wp) return [];
-      const all = [...(wp.flatrate || []), ...(wp.free || [])];
-      const unique = [...new Map(all.map(p => [p.provider_id, p])).values()];
-      return unique.filter(p => MY_SERVICE_IDS.has(p.provider_id));
-    } catch { return []; }
+    const wp = parseJSON(item.watch_providers, null);
+    if (!wp) return [];
+    const all = [...(wp.flatrate || []), ...(wp.free || [])];
+    const unique = [...new Map(all.map(p => [p.provider_id, p])).values()];
+    return unique.filter(p => MY_SERVICE_IDS.has(p.provider_id));
   })();
   // Collection / owned status
   const isOwned = (() => {
-    try {
-      const entries = JSON.parse(item.collection_entries || '[]');
-      return entries.some(e => e.format);
-    } catch { return false; }
+    const entries = parseJSON(item.collection_entries);
+    return entries.some(e => e.format);
   })();
 
   // ShortlistButton is rendered OUTSIDE SwipeToRemove to escape its overflow-hidden clipping.
@@ -342,7 +339,9 @@ export default function WhatToWatch() {
   const [showLog, setShowLog] = useState(false);
   const [showAdd, setShowAdd] = useState(false);
   const [randomPick, setRandomPick] = useState(null);
-  const [dismissed, setDismissed] = useState(new Set()); // session-only
+  const [dismissed, setDismissed] = useState(() => {
+    try { return new Set(parseJSON(sessionStorage.getItem('wtw-dismissed'))); } catch { return new Set(); }
+  });
   const [personFilter, setPersonFilter] = useState(null); // null = All
   // shortlistMap: { titleId -> [persons] }
   const [shortlistMap, setShortlistMap] = useState({});
@@ -356,6 +355,7 @@ export default function WhatToWatch() {
     setLoading(true);
     setRandomPick(null);
     setDismissed(new Set());
+    try { sessionStorage.removeItem('wtw-dismissed'); } catch {}
     setPersonFilter(null);
     try {
       const res = await api(`/api/what-to-watch/${context}`);
@@ -365,10 +365,8 @@ export default function WhatToWatch() {
       // Build shortlist map from inline shortlisted_by field
       const map = {};
       for (const item of list) {
-        try {
-          const people = JSON.parse(item.shortlisted_by || '[]').filter(Boolean);
-          if (people.length) map[item.id] = people;
-        } catch {}
+        const people = parseJSON(item.shortlisted_by).filter(Boolean);
+        if (people.length) map[item.id] = people;
       }
       setShortlistMap(map);
     } finally {
@@ -394,23 +392,31 @@ export default function WhatToWatch() {
   }
 
   async function handleShortlistToggle(titleId, person) {
-    await api('/api/shortlists', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ title_id: titleId, person, context }),
-    });
-    // Optimistically update local state
-    setShortlistMap(prev => {
-      const current = prev[titleId] || [];
-      const updated = current.includes(person)
-        ? current.filter(p => p !== person)
-        : [...current, person];
-      return { ...prev, [titleId]: updated };
-    });
+    // Optimistically update local state before the API call
+    const prev = shortlistMap[titleId] || [];
+    const updated = prev.includes(person)
+      ? prev.filter(p => p !== person)
+      : [...prev, person];
+    setShortlistMap(m => ({ ...m, [titleId]: updated }));
+
+    try {
+      await api('/api/shortlists', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ title_id: titleId, person, context }),
+      });
+    } catch {
+      // Revert on failure
+      setShortlistMap(m => ({ ...m, [titleId]: prev }));
+    }
   }
 
   function dismiss(id) {
-    setDismissed(prev => new Set([...prev, id]));
+    setDismissed(prev => {
+      const next = new Set([...prev, id]);
+      try { sessionStorage.setItem('wtw-dismissed', JSON.stringify([...next])); } catch {}
+      return next;
+    });
     if (randomPick?.id === id) setRandomPick(null);
   }
 

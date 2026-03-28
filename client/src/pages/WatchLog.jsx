@@ -3,11 +3,12 @@ import { Link } from 'react-router-dom';
 import { api } from '../api';
 import LogViewing from '../components/LogViewing';
 import { useFamily } from '../context/FamilyContext';
+import { parseJSON } from '../utils';
 
 function ViewingRow({ v }) {
-  const people = (() => { try { return JSON.parse(v.people || '[]'); } catch { return []; } })();
-  const tags = (() => { try { return JSON.parse(v.tags || '[]'); } catch { return []; } })();
-  const genres = (() => { try { return JSON.parse(v.genre || '[]'); } catch { return []; } })();
+  const people = parseJSON(v.people);
+  const tags = parseJSON(v.tags);
+  const genres = parseJSON(v.genre);
   const choosers = people.filter(p => p.role === 'chooser').map(p => p.person);
 
   const dateLabel = v.date

@@ -1,4 +1,5 @@
 import { Link } from 'react-router-dom';
+import { parseJSON } from '../utils';
 
 function StarRating({ rating }) {
   if (!rating) return null;
@@ -22,9 +23,7 @@ function PosterPlaceholder({ title }) {
 }
 
 export default function TitleCard({ item, showStreaming = true, showWatched = true, compact = false, addedBy }) {
-  const genres = (() => {
-    try { return JSON.parse(item.genre || '[]'); } catch { return []; }
-  })();
+  const genres = parseJSON(item.genre);
 
   const lastWatchedLabel = item.last_watched
     ? `Last watched ${new Date(item.last_watched).toLocaleDateString('en-CA', { year: 'numeric', month: 'short' })}`

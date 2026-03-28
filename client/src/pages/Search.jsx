@@ -1,10 +1,11 @@
 import { useState, useEffect, useRef } from 'react';
 import { Link } from 'react-router-dom';
 import { api } from '../api';
+import { parseJSON } from '../utils';
 
 function SearchResult({ t }) {
-  const genres = (() => { try { return JSON.parse(t.genre || '[]'); } catch { return []; } })();
-  const onLists = (() => { try { return JSON.parse(t.on_lists || '[]'); } catch { return []; } })();
+  const genres = parseJSON(t.genre);
+  const onLists = parseJSON(t.on_lists);
   // Remove nulls from json_group_array when no list memberships
   const lists = onLists.filter(Boolean);
 

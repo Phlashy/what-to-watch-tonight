@@ -5,6 +5,7 @@ import LogViewing from '../components/LogViewing';
 import TMDBPicker from '../components/TMDBPicker';
 import { usePerson } from '../context/PersonContext';
 import { useFamily } from '../context/FamilyContext';
+import { parseJSON } from '../utils';
 
 function relativeTime(isoString) {
   if (!isoString) return '';
@@ -25,8 +26,8 @@ function ViewingItem({ v, onDelete, onSaved }) {
   const [editing, setEditing] = useState(false);
   const [saving, setSaving] = useState(false);
 
-  const parsedPeople = (() => { try { return JSON.parse(v.people || '[]'); } catch { return []; } })();
-  const tags = (() => { try { return JSON.parse(v.tags || '[]'); } catch { return []; } })();
+  const parsedPeople = parseJSON(v.people);
+  const tags = parseJSON(v.tags);
   const watcherNames = parsedPeople.map(p => p.person);
   // Per-person ratings from existing data
   const existingPersonRatings = Object.fromEntries(
@@ -460,7 +461,7 @@ export default function TitleDetail() {
       setTitle(data);
       // Load cached watch providers if available
       if (data.watch_providers) {
-        try { setWatchProviders(JSON.parse(data.watch_providers)); } catch {}
+        setWatchProviders(parseJSON(data.watch_providers, null));
         setWatchProvidersUpdatedAt(data.watch_providers_updated_at);
       } else {
         setWatchProviders(null);
@@ -549,11 +550,11 @@ export default function TitleDetail() {
 
   if (!title) return <div className="px-4 pt-16 text-slate-400">Not found</div>;
 
-  const cast = (() => { try { return JSON.parse(title.cast || '[]'); } catch { return []; } })();
-  const genres = (() => { try { return JSON.parse(title.genre || '[]'); } catch { return []; } })();
+  const cast = parseJSON(title.cast);
+  const genres = parseJSON(title.genre);
   // Collect all per-person ratings across all viewings; fall back to group rating
   const allRatings = (title.viewings || []).flatMap(v => {
-    const vp = (() => { try { return JSON.parse(v.people || '[]'); } catch { return []; } })();
+    const vp = parseJSON(v.people);
     const personRatings = vp.map(p => p.rating).filter(r => r != null);
     return personRatings.length > 0 ? personRatings : (v.rating ? [v.rating] : []);
   });
@@ -691,6 +692,56 @@ export default function TitleDetail() {
             </div>
           </div>
         )}
+
+        {/* Shortlisted — standalone section visible regardless of list membership */}
+        {(() => {
+          const shortlists = title.shortlists || [];
+          // Group by context
+          const byContext = {};
+          for (const s of shortlists) {
+            if (!byContext[s.context]) byContext[s.context] = [];
+            byContext[s.context].push(s.person);
+          }
+          const contextEntries = Object.entries(byContext);
+          const allContextIds = Object.keys(LIST_TO_CONTEXT).length > 0
+            ? [...new Set(Object.values(LIST_TO_CONTEXT))]
+            : [];
+
+          // Show section if there are any shortlists OR the title is on a list (so user can toggle)
+          if (contextEntries.length === 0 && !title.listMemberships?.length) return null;
+
+          return (
+            <div>
+              <h3 className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1.5">Shortlisted</h3>
+              {contextEntries.length > 0 ? (
+                <div className="space-y-1">
+                  {contextEntries.map(([ctx, people]) => (
+                    <div key={ctx} className="flex items-center gap-2">
+                      <span className="text-xs text-slate-500 capitalize w-16">{ctx}</span>
+                      <div className="flex items-center gap-1">
+                        {people.map(p => (
+                          <button
+                            key={p}
+                            onClick={() => currentPerson && toggleShortlist(p, ctx)}
+                            className={`text-xs rounded-full px-2 py-0.5 font-medium transition-colors ${
+                              p === currentPerson
+                                ? 'bg-amber-500/20 text-amber-400 hover:bg-amber-500/30'
+                                : 'bg-slate-800 text-slate-300'
+                            }`}
+                          >
+                            {p} <span className="text-amber-400">★</span>
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <p className="text-xs text-slate-600">Not shortlisted yet</p>
+              )}
+            </div>
+          );
+        })()}
 
         {/* Where to Watch / Collection */}
         {(title.tmdb_id || title.collection?.length > 0) ? (

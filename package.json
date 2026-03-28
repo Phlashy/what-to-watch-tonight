@@ -15,7 +15,8 @@
     "enrich": "node scripts/enrich-tmdb.js",
     "dedup": "node scripts/dedup-titles.js",
     "backfill-added-by": "node scripts/backfill-added-by.js",
-    "icons": "node scripts/generate-icons.js"
+    "icons": "node scripts/generate-icons.js",
+    "test": "node --test tests/*.test.js"
   },
   "devDependencies": {
     "concurrently": "^8.2.2"

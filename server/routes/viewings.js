@@ -99,9 +99,12 @@ router.post('/', (req, res) => {
     db.prepare('INSERT INTO viewing_people (viewing_id, person, role, rating) VALUES (?, ?, ?, ?)').run(viewingId, p.person, p.role || 'chooser', p.rating || null);
   }
 
-  // Update added_by on list items for this title if picked_by was specified
+  // Update added_by on the family_to_watch list item for this title if picked_by was specified
   if (picked_by) {
-    db.prepare('UPDATE list_items SET added_by = ? WHERE title_id = ?').run(picked_by, title_id);
+    const familyList = db.prepare("SELECT id FROM lists WHERE name = 'family_to_watch'").get();
+    if (familyList) {
+      db.prepare('UPDATE list_items SET added_by = ? WHERE title_id = ? AND list_id = ?').run(picked_by, title_id, familyList.id);
+    }
   }
 
   // Remove from list_items if it was on family_to_watch and has family_movie_night tag
