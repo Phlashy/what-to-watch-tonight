@@ -15,13 +15,12 @@ function buildSystemPrompt(person, config) {
   const rotationStr = config.rotation.join(' → ');
   const listDescriptions = config.lists.map((l) => `- ${l.name}: ${l.displayName}`).join('\n');
 
+  // Stable content first, volatile (person, date) last — prompt caching is a
+  // prefix match, so anything that varies belongs at the end.
   return `You are the Movie Night Assistant for the ${config.familyName} family. You're friendly, concise, and helpful.
 
 The family members are: ${memberList}.
 Family Movie Night rotation order: ${rotationStr} (repeats).
-
-You are currently talking to: ${person || 'an unknown family member'}.
-Today's date: ${new Date().toISOString().split('T')[0]}.
 
 Lists in the system:
 ${listDescriptions}
@@ -36,7 +35,10 @@ CRITICAL RULES:
 - You may use multiple tool calls to answer a single question if needed.
 
 When you mention specific titles, format them as [[title_id:Title Name]] so the app can make them clickable links.
-Keep responses conversational and concise. The family uses this on their phones on movie night, so don't write essays.`;
+Keep responses conversational and concise. The family uses this on their phones on movie night, so don't write essays.
+
+You are currently talking to: ${person || 'an unknown family member'}.
+Today's date: ${new Date().toISOString().split('T')[0]}.`;
 }
 
 // --- Tool definitions ---
@@ -532,14 +534,26 @@ router.post('/', async (req, res) => {
     const trimmed = messages.length > 40 ? messages.slice(-40) : messages;
     let anthropicMessages = trimmed.map((m) => ({ role: m.role, content: m.content }));
 
+    // Build once so every call in the loop sends a byte-identical prefix —
+    // cache_control caches it (tools + system + prior messages), so each loop
+    // iteration and follow-up question re-reads the prefix at ~10% price
+    // instead of reprocessing it.
+    const system = buildSystemPrompt(person, config);
+    const logUsage = (u, label) =>
+      console.log(
+        `chat ${label}: in=${u.input_tokens} cacheRead=${u.cache_read_input_tokens ?? 0} cacheWrite=${u.cache_creation_input_tokens ?? 0} out=${u.output_tokens}`
+      );
+
     // Agentic loop: keep calling Claude until no more tool_use
     let response = await anthropic.messages.create({
       model: MODEL,
       max_tokens: 1024,
-      system: buildSystemPrompt(person, config),
+      cache_control: { type: 'ephemeral' },
+      system,
       tools,
       messages: anthropicMessages,
     });
+    logUsage(response.usage, 'call 0');
 
     let iterations = 0;
     while (response.stop_reason === 'tool_use' && iterations < 5) {
@@ -564,10 +578,12 @@ router.post('/', async (req, res) => {
       response = await anthropic.messages.create({
         model: MODEL,
         max_tokens: 1024,
-        system: buildSystemPrompt(person, config),
+        cache_control: { type: 'ephemeral' },
+        system,
         tools,
         messages: anthropicMessages,
       });
+      logUsage(response.usage, `call ${iterations}`);
     }
 
     const textContent = response.content

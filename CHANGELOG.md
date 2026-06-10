@@ -65,6 +65,16 @@ followed it — see `docs/AUDIT-OUTCOME.md` for the story and the result. Tiers
   local-only process files (private-doc symlinks, prompt scaffolding, plan
   notes) were untracked so the public repo contains only the project itself.
 
+- **Viewings endpoint builds its filters once** — the results query and its
+  pagination-count query previously duplicated ~40 lines of WHERE-clause
+  construction; a filter added to one but not the other would have silently
+  broken totals. Now they share one clause.
+- **Chat requests use prompt caching** — the system prompt, tool definitions,
+  and conversation history are cached between the assistant's tool-loop calls
+  and across follow-up questions (re-read at ~10% of input price once past the
+  model's 4K-token caching minimum). Volatile prompt parts (person, date) moved
+  to the end of the system prompt to keep the cached prefix stable, and each
+  API call now logs its token usage (visible in pm2 logs).
 - **CI now guards the committed client bundle**: the Pi deploys by `git pull`
   and never builds, so CI rebuilds the client and fails if `client/dist` is
   stale relative to the source. `WORKFLOW.md`'s deploy section was rewritten to
