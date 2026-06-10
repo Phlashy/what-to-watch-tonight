@@ -12,110 +12,83 @@ router.get('/', (req, res) => {
   const page = Math.max(parseInt(req.query.page, 10) || 1, 1);
   const offset = (page - 1) * limit;
 
-  let query = `
+  // Build the WHERE clause once — the results query and the count query share
+  // it, so a filter can never apply to one and not the other (which would
+  // silently break pagination totals).
+  let where = ' WHERE 1=1';
+  const filterParams = [];
+
+  if (type) {
+    where += ' AND t.type = ?';
+    filterParams.push(type);
+  }
+  if (search) {
+    where += ' AND t.title LIKE ?';
+    filterParams.push(`%${search}%`);
+  }
+  if (from) {
+    where += ' AND v.date >= ?';
+    filterParams.push(from);
+  }
+  if (to) {
+    where += ' AND v.date <= ?';
+    filterParams.push(to);
+  }
+  if (minRating) {
+    where +=
+      ' AND COALESCE((SELECT MAX(vp2.rating) FROM viewing_people vp2 WHERE vp2.viewing_id = v.id AND vp2.rating IS NOT NULL), v.rating) >= ?';
+    filterParams.push(parseInt(minRating));
+  }
+  if (maxRating) {
+    where +=
+      ' AND COALESCE((SELECT MAX(vp2.rating) FROM viewing_people vp2 WHERE vp2.viewing_id = v.id AND vp2.rating IS NOT NULL), v.rating) <= ?';
+    filterParams.push(parseInt(maxRating));
+  }
+  if (tags) {
+    for (const tag of tags.split(',')) {
+      // tags is a JSON array of strings, so match the quoted form — a bare
+      // %comedy% would also match "dark_comedy".
+      where += ' AND v.tags LIKE ?';
+      filterParams.push(`%"${tag.trim()}"%`);
+    }
+  }
+  if (person) {
+    where +=
+      ' AND EXISTS (SELECT 1 FROM viewing_people vp2 WHERE vp2.viewing_id = v.id AND vp2.person = ?)';
+    filterParams.push(person);
+  }
+  if (hasNotes === 'true') {
+    where += " AND v.notes IS NOT NULL AND v.notes != ''";
+  }
+
+  const orderBy =
+    sort === 'rating'
+      ? ' GROUP BY v.id ORDER BY COALESCE((SELECT MAX(vp3.rating) FROM viewing_people vp3 WHERE vp3.viewing_id = v.id AND vp3.rating IS NOT NULL), v.rating) DESC NULLS LAST, v.date DESC NULLS LAST'
+      : ' GROUP BY v.id ORDER BY v.date DESC NULLS LAST, v.created_at DESC';
+
+  const viewings = db
+    .prepare(
+      `
     SELECT v.*, t.title, t.year, t.poster_url, t.type, t.genre, t.director,
       json_group_array(json_object('person', vp.person, 'role', vp.role, 'rating', vp.rating)) as people
     FROM viewings v
     JOIN titles t ON v.title_id = t.id
     LEFT JOIN viewing_people vp ON v.id = vp.viewing_id
-    WHERE 1=1
-  `;
-  const params = [];
+    ${where}${orderBy} LIMIT ? OFFSET ?
+  `
+    )
+    .all(...filterParams, limit, offset);
 
-  if (type) {
-    query += ' AND t.type = ?';
-    params.push(type);
-  }
-  if (search) {
-    query += ' AND t.title LIKE ?';
-    params.push(`%${search}%`);
-  }
-  if (from) {
-    query += ' AND v.date >= ?';
-    params.push(from);
-  }
-  if (to) {
-    query += ' AND v.date <= ?';
-    params.push(to);
-  }
-  if (minRating) {
-    query +=
-      ' AND COALESCE((SELECT MAX(vp2.rating) FROM viewing_people vp2 WHERE vp2.viewing_id = v.id AND vp2.rating IS NOT NULL), v.rating) >= ?';
-    params.push(parseInt(minRating));
-  }
-  if (maxRating) {
-    query +=
-      ' AND COALESCE((SELECT MAX(vp2.rating) FROM viewing_people vp2 WHERE vp2.viewing_id = v.id AND vp2.rating IS NOT NULL), v.rating) <= ?';
-    params.push(parseInt(maxRating));
-  }
-  if (tags) {
-    const tagList = tags.split(',');
-    for (const tag of tagList) {
-      // tags is a JSON array of strings, so match the quoted form — a bare
-      // %comedy% would also match "dark_comedy".
-      query += ' AND v.tags LIKE ?';
-      params.push(`%"${tag.trim()}"%`);
-    }
-  }
-  if (person) {
-    query +=
-      ' AND EXISTS (SELECT 1 FROM viewing_people vp2 WHERE vp2.viewing_id = v.id AND vp2.person = ?)';
-    params.push(person);
-  }
-  if (hasNotes === 'true') {
-    query += " AND v.notes IS NOT NULL AND v.notes != ''";
-  }
-
-  if (sort === 'rating') {
-    query +=
-      ' GROUP BY v.id ORDER BY COALESCE((SELECT MAX(vp3.rating) FROM viewing_people vp3 WHERE vp3.viewing_id = v.id AND vp3.rating IS NOT NULL), v.rating) DESC NULLS LAST, v.date DESC NULLS LAST';
-  } else {
-    query += ' GROUP BY v.id ORDER BY v.date DESC NULLS LAST, v.created_at DESC';
-  }
-  query += ' LIMIT ? OFFSET ?';
-  params.push(limit, offset);
-
-  const viewings = db.prepare(query).all(...params);
-
-  // Count total (without pagination) — reuse filter params (all except LIMIT and OFFSET)
-  const filterParams = params.slice(0, -2);
-  let countQuery = `
+  const total = db
+    .prepare(
+      `
     SELECT COUNT(DISTINCT v.id) as total
     FROM viewings v JOIN titles t ON v.title_id = t.id
     LEFT JOIN viewing_people vp ON v.id = vp.viewing_id
-    WHERE 1=1
-  `;
-  if (type) {
-    countQuery += ' AND t.type = ?';
-  }
-  if (search) {
-    countQuery += ' AND t.title LIKE ?';
-  }
-  if (from) {
-    countQuery += ' AND v.date >= ?';
-  }
-  if (to) {
-    countQuery += ' AND v.date <= ?';
-  }
-  if (minRating) {
-    countQuery +=
-      ' AND COALESCE((SELECT MAX(vp2.rating) FROM viewing_people vp2 WHERE vp2.viewing_id = v.id AND vp2.rating IS NOT NULL), v.rating) >= ?';
-  }
-  if (maxRating) {
-    countQuery +=
-      ' AND COALESCE((SELECT MAX(vp2.rating) FROM viewing_people vp2 WHERE vp2.viewing_id = v.id AND vp2.rating IS NOT NULL), v.rating) <= ?';
-  }
-  if (tags) {
-    countQuery += ' AND v.tags LIKE ?'.repeat(tags.split(',').length);
-  }
-  if (person) {
-    countQuery +=
-      ' AND EXISTS (SELECT 1 FROM viewing_people vp2 WHERE vp2.viewing_id = v.id AND vp2.person = ?)';
-  }
-  if (hasNotes === 'true') {
-    countQuery += " AND v.notes IS NOT NULL AND v.notes != ''";
-  }
-  const total = db.prepare(countQuery).get(...filterParams).total;
+    ${where}
+  `
+    )
+    .get(...filterParams).total;
 
   res.json({ viewings, total, page, limit });
 });
