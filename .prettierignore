@@ -1,0 +1,8 @@
+node_modules
+client/dist
+client/public/icons
+**/package-lock.json
+*.db
+*.db-shm
+*.db-wal
+wtwt

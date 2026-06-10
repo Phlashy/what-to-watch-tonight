@@ -1,0 +1,244 @@
+const { describe, it, before } = require('node:test');
+const assert = require('node:assert/strict');
+const { createTestDb, seedTestData, TEST_CONFIG } = require('./helpers');
+const { executeToolCall } = require('../server/routes/chat');
+const rotationCore = require('../server/lib/rotation');
+
+// Unit tests for the chat assistant's tool layer (server/routes/chat.js).
+// executeToolCall is the same dispatcher the agentic loop uses, run here against
+// an in-memory database — so these exercise the real SQL the assistant relies on.
+//
+// The /api/chat HTTP route itself isn't covered (it calls the paid Anthropic
+// API); everything below it is.
+describe('chat assistant tools', () => {
+  let db, ids;
+
+  const call = (name, input = {}) => executeToolCall(db, name, input, TEST_CONFIG);
+
+  before(() => {
+    db = createTestDb();
+    ids = seedTestData(db);
+
+    // Viewings: two with per-person ratings, one legacy (group rating only).
+    const addViewing = (titleId, date, rating = null) =>
+      db
+        .prepare("INSERT INTO viewings (title_id, date, rating, tags) VALUES (?, ?, ?, '[]')")
+        .run(titleId, date, rating).lastInsertRowid;
+    const addPerson = (viewingId, person, rating) =>
+      db
+        .prepare(
+          "INSERT INTO viewing_people (viewing_id, person, role, rating) VALUES (?, ?, 'chooser', ?)"
+        )
+        .run(viewingId, person, rating);
+
+    const v1 = addViewing(ids.titles.princessBride, '2026-01-10');
+    addPerson(v1, 'Gordon', 5);
+    addPerson(v1, 'Davin', 4);
+
+    const v2 = addViewing(ids.titles.spiritedAway, '2026-02-01');
+    addPerson(v2, 'Gordon', 4);
+
+    // Legacy shape: a group rating on the viewing, no per-person rows.
+    addViewing(ids.titles.breakingBad, '2025-12-01', 5);
+  });
+
+  describe('search_titles', () => {
+    it('matches by title text', () => {
+      const results = call('search_titles', { query: 'princess' });
+      assert.equal(results.length, 1);
+      assert.equal(results[0].title, 'The Princess Bride');
+      assert.equal(results[0].view_count, 1);
+    });
+
+    it('matches by director', () => {
+      const results = call('search_titles', { query: 'Miyazaki' });
+      assert.equal(results.length, 1);
+      assert.equal(results[0].title, 'Spirited Away');
+    });
+
+    it('filters by type and genre', () => {
+      const shows = call('search_titles', { type: 'show' });
+      assert.deepEqual(
+        shows.map((t) => t.title),
+        ['Breaking Bad']
+      );
+      const comedies = call('search_titles', { genre: 'Comedy' });
+      assert.deepEqual(comedies.map((t) => t.title).sort(), [
+        'Asterix: The Secret of the Magic Potion',
+        'The Princess Bride',
+      ]);
+    });
+
+    it('averages per-person ratings, falling back to the group rating', () => {
+      const [pb] = call('search_titles', { query: 'princess' });
+      assert.equal(pb.avg_rating, 4.5); // Gordon 5, Davin 4
+      const [bb] = call('search_titles', { query: 'breaking' });
+      assert.equal(bb.avg_rating, 5); // legacy group rating
+    });
+
+    it('tolerates an oversized limit (clamped server-side)', () => {
+      const results = call('search_titles', { limit: 99999 });
+      assert.ok(Array.isArray(results));
+      assert.ok(results.length <= 50);
+    });
+  });
+
+  describe('get_title_details', () => {
+    it('returns viewings with people, list memberships, and collection', () => {
+      const details = call('get_title_details', { title_id: ids.titles.princessBride });
+      assert.equal(details.title, 'The Princess Bride');
+      assert.equal(details.viewings.length, 1);
+      const people = JSON.parse(details.viewings[0].people);
+      assert.deepEqual(people.map((p) => p.person).sort(), ['Davin', 'Gordon']);
+      assert.equal(details.listMemberships[0].name, 'family_to_watch');
+      assert.ok(Array.isArray(details.collection));
+    });
+
+    it('returns an error for an unknown id', () => {
+      assert.deepEqual(call('get_title_details', { title_id: 999999 }), {
+        error: 'Title not found',
+      });
+    });
+  });
+
+  describe('get_viewing_history', () => {
+    it('returns newest-first by default', () => {
+      const rows = call('get_viewing_history', {});
+      assert.deepEqual(
+        rows.map((r) => r.title),
+        ['Spirited Away', 'The Princess Bride', 'Breaking Bad']
+      );
+    });
+
+    it('filters by person', () => {
+      const rows = call('get_viewing_history', { person: 'Davin' });
+      assert.deepEqual(
+        rows.map((r) => r.title),
+        ['The Princess Bride']
+      );
+    });
+
+    it('filters by date range and title search', () => {
+      const jan = call('get_viewing_history', { from_date: '2026-01-01', to_date: '2026-01-31' });
+      assert.deepEqual(
+        jan.map((r) => r.title),
+        ['The Princess Bride']
+      );
+      const search = call('get_viewing_history', { search: 'spirited' });
+      assert.equal(search.length, 1);
+    });
+
+    it('sorts by rating when asked', () => {
+      const rows = call('get_viewing_history', { sort: 'rating' });
+      // Princess Bride (max 5) and Breaking Bad (group 5) outrank Spirited Away (4).
+      assert.equal(rows[rows.length - 1].title, 'Spirited Away');
+    });
+  });
+
+  describe('lists', () => {
+    it('get_list_items returns items in priority order', () => {
+      const result = call('get_list_items', { list_name: 'family_to_watch' });
+      assert.equal(result.item_count, 2);
+      assert.deepEqual(
+        result.items.map((i) => i.title),
+        ['The Princess Bride', 'Spirited Away']
+      );
+    });
+
+    it('get_list_items errors on an unknown list', () => {
+      assert.ok(call('get_list_items', { list_name: 'nope' }).error);
+    });
+
+    it('get_all_lists returns every list with its item count', () => {
+      const lists = call('get_all_lists');
+      assert.equal(lists.length, 3);
+      assert.equal(lists.find((l) => l.name === 'family_to_watch').item_count, 2);
+      assert.equal(lists.find((l) => l.name === 'with_nupur').item_count, 0);
+    });
+
+    it('add_to_list inserts, rejects duplicates, and validates ids', () => {
+      const ok = call('add_to_list', {
+        title_id: ids.titles.asterix,
+        list_name: 'with_nupur',
+        added_by: 'Gordon',
+      });
+      assert.equal(ok.success, true);
+
+      const dup = call('add_to_list', { title_id: ids.titles.asterix, list_name: 'with_nupur' });
+      assert.match(dup.error, /already on/);
+
+      assert.ok(call('add_to_list', { title_id: ids.titles.asterix, list_name: 'nope' }).error);
+      assert.ok(call('add_to_list', { title_id: 999999, list_name: 'with_nupur' }).error);
+    });
+
+    it('remove_from_list deletes, then reports a missing item', () => {
+      const ok = call('remove_from_list', {
+        title_id: ids.titles.asterix,
+        list_name: 'with_nupur',
+      });
+      assert.equal(ok.success, true);
+      const gone = call('remove_from_list', {
+        title_id: ids.titles.asterix,
+        list_name: 'with_nupur',
+      });
+      assert.match(gone.error, /not found/);
+    });
+  });
+
+  describe('stats tools', () => {
+    it('get_person_stats aggregates totals, average, and genres', () => {
+      const stats = call('get_person_stats', { person: 'Gordon' });
+      assert.equal(stats.total_viewings, 2);
+      assert.equal(stats.avg_rating, 4.5);
+      assert.equal(stats.top_rated[0].title, 'The Princess Bride');
+      const adventure = stats.top_genres.find((g) => g.genre === 'Adventure');
+      assert.equal(adventure.count, 2); // Princess Bride + Spirited Away
+    });
+
+    it('get_top_directors counts viewings, optionally per person', () => {
+      const all = call('get_top_directors', {});
+      assert.equal(all.length, 3);
+      assert.ok(all.every((d) => d.view_count === 1));
+      const davin = call('get_top_directors', { person: 'Davin' });
+      assert.deepEqual(
+        davin.map((d) => d.director),
+        ['Rob Reiner']
+      );
+    });
+
+    it('get_top_genres ranks genres across viewings', () => {
+      const genres = call('get_top_genres', {});
+      assert.equal(genres[0].genre, 'Adventure');
+      assert.equal(genres[0].count, 2);
+    });
+  });
+
+  describe('get_family_rotation', () => {
+    it('matches the shared rotation core (same source as the Tonight tab)', () => {
+      const state = call('get_family_rotation');
+      assert.equal(state.next_chooser, 'Davin'); // unset → first in rotation
+      assert.deepEqual(state.rotation, TEST_CONFIG.rotation);
+
+      rotationCore.advanceRotation(db, TEST_CONFIG.rotation);
+      const advanced = call('get_family_rotation');
+      assert.equal(advanced.next_chooser, 'Arianne');
+      assert.equal(advanced.last_chooser, 'Davin');
+    });
+  });
+
+  describe('dispatcher', () => {
+    it('reports unknown tools', () => {
+      assert.deepEqual(call('no_such_tool'), { error: 'Unknown tool: no_such_tool' });
+    });
+
+    it('turns a thrown error into a safe error result', () => {
+      const broken = {
+        prepare() {
+          throw new Error('boom');
+        },
+      };
+      const result = executeToolCall(broken, 'search_titles', {}, TEST_CONFIG);
+      assert.deepEqual(result, { error: 'Failed to execute search_titles' });
+    });
+  });
+});

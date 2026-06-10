@@ -1,0 +1,64 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20' # matches the Raspberry Pi (production) runtime
+
+      - name: Install root deps
+        run: npm ci
+
+      - name: Install server deps
+        run: npm ci
+        working-directory: server
+
+      - name: Install client deps
+        run: npm ci
+        working-directory: client
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Check formatting
+        run: npm run format:check
+
+      - name: Run tests
+        run: npm test
+
+      - name: Build client
+        run: npm run build
+        working-directory: client
+
+      # The Pi deploys by `git pull` and never builds, so the committed
+      # client/dist must always match the source. If this fails, someone
+      # changed client code without running `npm run build` and committing
+      # the refreshed bundle.
+      - name: Committed client/dist must match the built output
+        run: |
+          if [ -n "$(git status --porcelain -- client/dist)" ]; then
+            echo "::error::client/dist is stale — run 'npm run build' at the repo root and commit the result."
+            git status --porcelain -- client/dist
+            exit 1
+          fi
+
+      # Fail the build on high/critical advisories. Moderate dev-only issues
+      # (e.g. the esbuild/vite dev-server advisory) are tracked in KNOWN-ISSUES
+      # and don't fail CI.
+      - name: Security audit (root)
+        run: npm audit --audit-level=high
+      - name: Security audit (server)
+        run: npm audit --audit-level=high
+        working-directory: server
+      - name: Security audit (client)
+        run: npm audit --audit-level=high
+        working-directory: client

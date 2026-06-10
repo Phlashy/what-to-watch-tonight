@@ -1,0 +1,51 @@
+# Dependencies
+node_modules/
+client/node_modules/
+server/node_modules/
+
+# Environment variables
+.env
+.env.local
+
+# Database (stored outside repo at ~/movie-night-data/)
+*.db
+*.db-shm
+*.db-wal
+
+# macOS
+.DS_Store
+**/.DS_Store
+
+# Logs
+*.log
+npm-debug.log*
+
+# Editor
+.vscode/
+.idea/
+
+# pm2
+.pm2/
+
+# Claude Code local settings
+.claude/settings.local.json
+
+# Family config (personal — use family.config.example.json as template)
+family.config.json
+
+# Personal data files (not for public repo)
+seed-data/final_consolidated.json
+HANDOFF.md
+bug-report.md
+movie-night-brief.md
+DVD Collection/
+wtwt/
+wtwt icon.png
+*.docx
+
+# Local-only process docs (symlinks into private Dropbox docs, prompt scaffolding)
+ANGUSPI_OPERATIONS.md
+PI_FRESH_SETUP_GUIDE.md
+code-review-qa-prompt.md
+wtwt-audit-and-rebuild-prompt.md
+.claude/plans/
