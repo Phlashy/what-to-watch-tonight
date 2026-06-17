@@ -65,6 +65,15 @@ followed it — see `docs/AUDIT-OUTCOME.md` for the story and the result. Tiers
   local-only process files (private-doc symlinks, prompt scaffolding, plan
   notes) were untracked so the public repo contains only the project itself.
 
+- **Acting on an independent code review (2026-06):** (1) list-item update/delete
+  routes are now scoped to the list named in the URL — an item id from another
+  list can no longer be modified or deleted through the wrong list's path (404
+  instead); (2) the chat assistant's list mutations (`add_to_list` /
+  `remove_from_list`) are now a server-enforced two-step — the tool refuses to
+  apply a change unless called with `confirmed: true`, which the assistant only
+  sets after the user explicitly agrees (defense-in-depth, since there is no
+  undo); (3) cleared a high-severity dev-only `form-data` advisory via
+  `npm audit fix` (test tooling only; production deps were already clean).
 - **Viewings endpoint builds its filters once** — the results query and its
   pagination-count query previously duplicated ~40 lines of WHERE-clause
   construction; a filter added to one but not the other would have silently

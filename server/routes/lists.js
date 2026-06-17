@@ -145,8 +145,16 @@ router.put('/:name/items/:itemId', (req, res) => {
   const db = req.app.locals.db;
   const { streaming_service, note, source, priority, added_by } = req.body;
   const addedByProvided = 'added_by' in req.body;
-  const item = db.prepare('SELECT id FROM list_items WHERE id = ?').get(req.params.itemId);
-  if (!item) return res.status(404).json({ error: 'List item not found' });
+  // Scope the item to the list named in the URL — an id from another list must
+  // not be mutable through this list's path.
+  const item = db
+    .prepare(
+      `SELECT li.id FROM list_items li
+       JOIN lists l ON li.list_id = l.id
+       WHERE li.id = ? AND l.name = ?`
+    )
+    .get(req.params.itemId, req.params.name);
+  if (!item) return res.status(404).json({ error: 'List item not found on this list' });
   db.prepare(
     `
     UPDATE list_items SET
@@ -189,8 +197,15 @@ router.post('/items/reorder', (req, res) => {
 // DELETE /api/lists/:name/items/:itemId
 router.delete('/:name/items/:itemId', (req, res) => {
   const db = req.app.locals.db;
-  const { changes } = db.prepare('DELETE FROM list_items WHERE id = ?').run(req.params.itemId);
-  if (!changes) return res.status(404).json({ error: 'List item not found' });
+  // Scope the delete to the list named in the URL — an id from another list
+  // must not be deletable through this list's path.
+  const { changes } = db
+    .prepare(
+      `DELETE FROM list_items
+       WHERE id = ? AND list_id = (SELECT id FROM lists WHERE name = ?)`
+    )
+    .run(req.params.itemId, req.params.name);
+  if (!changes) return res.status(404).json({ error: 'List item not found on this list' });
   res.json({ success: true });
 });
 

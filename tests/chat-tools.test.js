@@ -161,27 +161,72 @@ describe('chat assistant tools', () => {
         title_id: ids.titles.asterix,
         list_name: 'with_nupur',
         added_by: 'Gordon',
+        confirmed: true,
       });
       assert.equal(ok.success, true);
 
-      const dup = call('add_to_list', { title_id: ids.titles.asterix, list_name: 'with_nupur' });
+      const dup = call('add_to_list', {
+        title_id: ids.titles.asterix,
+        list_name: 'with_nupur',
+        confirmed: true,
+      });
       assert.match(dup.error, /already on/);
 
-      assert.ok(call('add_to_list', { title_id: ids.titles.asterix, list_name: 'nope' }).error);
-      assert.ok(call('add_to_list', { title_id: 999999, list_name: 'with_nupur' }).error);
+      assert.ok(
+        call('add_to_list', { title_id: ids.titles.asterix, list_name: 'nope', confirmed: true })
+          .error
+      );
+      assert.ok(
+        call('add_to_list', { title_id: 999999, list_name: 'with_nupur', confirmed: true }).error
+      );
     });
 
     it('remove_from_list deletes, then reports a missing item', () => {
       const ok = call('remove_from_list', {
         title_id: ids.titles.asterix,
         list_name: 'with_nupur',
+        confirmed: true,
       });
       assert.equal(ok.success, true);
       const gone = call('remove_from_list', {
         title_id: ids.titles.asterix,
         list_name: 'with_nupur',
+        confirmed: true,
       });
       assert.match(gone.error, /not found/);
+    });
+
+    it('refuses to mutate a list without confirmed:true (and does not change data)', () => {
+      // No confirmed flag → rejected, nothing added.
+      const blocked = call('add_to_list', {
+        title_id: ids.titles.breakingBad,
+        list_name: 'with_nupur',
+      });
+      assert.match(blocked.error, /not confirmed/i);
+
+      // confirmed:false is treated the same as missing.
+      const blockedFalse = call('add_to_list', {
+        title_id: ids.titles.breakingBad,
+        list_name: 'with_nupur',
+        confirmed: false,
+      });
+      assert.match(blockedFalse.error, /not confirmed/i);
+
+      const onList = call('get_list_items', { list_name: 'with_nupur' }).items.some(
+        (i) => i.title_id === ids.titles.breakingBad
+      );
+      assert.equal(onList, false);
+
+      // remove_from_list is gated the same way.
+      const blockedRemove = call('remove_from_list', {
+        title_id: ids.titles.princessBride,
+        list_name: 'family_to_watch',
+      });
+      assert.match(blockedRemove.error, /not confirmed/i);
+      const stillThere = call('get_list_items', { list_name: 'family_to_watch' }).items.some(
+        (i) => i.title_id === ids.titles.princessBride
+      );
+      assert.equal(stillThere, true);
     });
   });
 

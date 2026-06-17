@@ -141,6 +141,28 @@ describe('Lists API', () => {
       const del = await request(app).delete('/api/lists/solo_gordon/items/999999');
       assert.equal(del.status, 404);
     });
+
+    it('cannot update or delete an item through a different list’s URL', async () => {
+      // breakingBadSolo lives on solo_gordon; try to touch it via family_to_watch.
+      const itemId = ids.listItems.breakingBadSolo;
+
+      const put = await request(app)
+        .put(`/api/lists/family_to_watch/items/${itemId}`)
+        .send({ note: 'hijack' });
+      assert.equal(put.status, 404);
+
+      const del = await request(app).delete(`/api/lists/family_to_watch/items/${itemId}`);
+      assert.equal(del.status, 404);
+
+      // The item is untouched on its real list.
+      const row = db.prepare('SELECT note FROM list_items WHERE id = ?').get(itemId);
+      assert.ok(row);
+      assert.notEqual(row.note, 'hijack');
+
+      // ...and the correct list's URL still works.
+      const ok = await request(app).delete(`/api/lists/solo_gordon/items/${itemId}`).expect(200);
+      assert.equal(ok.body.success, true);
+    });
   });
 
   describe('PUT /api/lists/:name (rename / icon)', () => {
