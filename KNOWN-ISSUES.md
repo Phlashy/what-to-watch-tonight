@@ -46,7 +46,21 @@ Last updated: 2026-06-09
 
 #### Accepted (low-risk, tracked)
 
-- **esbuild/vite dev-server advisory (moderate)** — the only fix is `vite@8` (major breaking upgrade from v5). The advisory affects the _dev server only_, not the built production assets, so it's deliberately deferred rather than forced. Revisit when doing a Vite major upgrade.
+- **Client dev-toolchain advisories (Vite / esbuild / Babel)** — these now rate
+  _high_ (esbuild dev-server RCE, `@babel/core` file read) and would fail
+  `npm audit --audit-level=high`, but they live entirely in the client's
+  **build toolchain** (`devDependencies`), which never ships to the Pi or a
+  user's browser — the client deploys as prebuilt static assets. As of
+  **2026-06-17** the client CI audit runs `npm audit --omit=dev --audit-level=high`,
+  so it gates on the deps that actually ship (React, Router, dnd-kit) while not
+  failing on dev-server advisories. Root and server stay full-strength.
+  - **TODO (deferred, do deliberately): upgrade Vite 5 → 8** (+ `@vitejs/plugin-react`
+    4 → 5) to clear these at source. It's a 3-major jump and this app's
+    `/movie-night/` base-path correctness rides on Vite's `base` / `BASE_URL`
+    handling (`client/src/api.js`, router basename, asset prefixing), so it needs
+    a real build + in-browser verification pass — not `npm audit fix --force`.
+    Keep Tailwind on 3 (Tailwind 4 is a separate migration). After the upgrade,
+    the client audit can drop `--omit=dev` again if the advisories clear.
 
 ### Phase 3 · Tier 1 — make tests real (in progress, 2026-05-30)
 
