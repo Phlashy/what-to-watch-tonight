@@ -12,7 +12,8 @@ repo.)
 
 | Detail       | Value                                                                                |
 | ------------ | ------------------------------------------------------------------------------------ |
-| URL          | `http://anguspi.local/movie-night/`                                                  |
+| URL (home)   | `http://anguspi.local/movie-night/`                                                  |
+| URL (remote) | `https://anguspi.tail485122.ts.net:8443/movie-night/` (Tailscale, private)            |
 | Port         | 3001                                                                                 |
 | Pi directory | `~/what-to-watch-tonight/`                                                           |
 | Database     | `~/movie-night-data/movies.db`                                                       |
@@ -46,6 +47,8 @@ ANTHROPIC_API_KEY=<key>
 ## Deploy Updates
 
 > **Who runs these:** In practice, **Claude Code runs the commit → push → deploy commands**, always **asking Gordon for confirmation before pushing or deploying** (anything that leaves the local machine or touches the Pi). Gordon doesn't run `git push` or the deploy SSH by hand. The commands below are the canonical sequence Claude follows on request.
+
+> **Deploying from away (not on home Wi-Fi):** swap `anguspi.local` for the Tailscale name `anguspi.tail485122.ts.net` in the deploy SSH below — everything else is identical. Requires Tailscale connected and any other VPN (NordVPN) paused or split-tunnelled. See `ANGUSPI_OPERATIONS.md` → Remote Access.
 
 `client/dist/` is tracked in git. **Always build and commit before pushing** when client code changes. The Pi just pulls and restarts — it does not build.
 
