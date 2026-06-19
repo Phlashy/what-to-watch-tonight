@@ -2,9 +2,11 @@ import { useState, useEffect, useRef, useCallback } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { api } from '../api';
 import { addTitleFromTmdb } from '../lib/tmdb';
+import { useFromState } from '../lib/useFromState';
 import { parseJSON } from '../utils';
 
 function SearchResult({ t }) {
+  const fromState = useFromState();
   const genres = parseJSON(t.genre);
   const onLists = parseJSON(t.on_lists);
   // Remove nulls from json_group_array when no list memberships
@@ -13,6 +15,7 @@ function SearchResult({ t }) {
   return (
     <Link
       to={`/title/${t.id}`}
+      state={fromState}
       className="flex items-start gap-3 p-3 hover:bg-slate-800/60 rounded-xl transition-colors"
     >
       {t.poster_url ? (
@@ -167,6 +170,7 @@ export default function Search() {
   const [totalTitles, setTotalTitles] = useState(null);
   const inputRef = useRef(null);
   const navigate = useNavigate();
+  const fromState = useFromState();
 
   useEffect(() => {
     inputRef.current?.focus();
@@ -222,7 +226,7 @@ export default function Search() {
     setAdding(item.id);
     try {
       const id = await addTitleFromTmdb(item);
-      navigate(`/title/${id}`);
+      navigate(`/title/${id}`, { state: fromState });
     } catch {
       setAdding(null);
     }

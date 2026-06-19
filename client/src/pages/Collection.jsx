@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import { api } from '../api';
 import SortSelect from '../components/SortSelect';
 import { usePersistedState } from '../lib/usePersistedState';
+import { useFromState } from '../lib/useFromState';
 
 const FORMAT_LABELS = { dvd: 'DVD', bluray: 'Blu-ray', digital: 'Digital' };
 
@@ -25,6 +26,7 @@ export default function Collection() {
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState('all'); // all | dvd | bluray | digital
   const [sort, setSort] = usePersistedState('wtw-sort-collection', 'recent');
+  const fromState = useFromState();
 
   useEffect(() => {
     loadItems();
@@ -116,7 +118,12 @@ export default function Collection() {
         ) : (
           <div className="space-y-2">
             {filtered.map((item) => (
-              <Link key={item.id} to={`/title/${item.title_id}`} className="block">
+              <Link
+                key={item.id}
+                to={`/title/${item.title_id}`}
+                state={fromState}
+                className="block"
+              >
                 <div className="flex gap-3 bg-slate-800 rounded-xl p-3 active:bg-slate-700 transition-colors">
                   <div className="flex-shrink-0">
                     {item.poster_url ? (

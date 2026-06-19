@@ -1,8 +1,9 @@
 import { useState, useEffect, useRef } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useSearchParams } from 'react-router-dom';
 import { api } from '../api';
 import LogViewing from '../components/LogViewing';
 import { useFamily } from '../context/FamilyContext';
+import { useFromState } from '../lib/useFromState';
 import { parseJSON } from '../utils';
 
 const STATUS_LABELS = {
@@ -20,6 +21,7 @@ const STATUS_COLORS = {
 
 // ── Movie row (individual viewing) ────────────────────────────────────────────
 function ViewingRow({ v }) {
+  const fromState = useFromState();
   const people = parseJSON(v.people);
   const tags = parseJSON(v.tags);
   const watchers = people.map((p) => p.person);
@@ -33,7 +35,7 @@ function ViewingRow({ v }) {
     : 'Date unknown';
 
   return (
-    <Link to={`/title/${v.title_id}`} className="block">
+    <Link to={`/title/${v.title_id}`} state={fromState} className="block">
       <div className="flex gap-3 p-3 bg-slate-800 rounded-xl hover:bg-slate-750 active:bg-slate-700 transition-colors">
         {v.poster_url ? (
           <img
@@ -100,6 +102,7 @@ function ViewingRow({ v }) {
 
 // ── Show row (one row per show, grouped) ──────────────────────────────────────
 function ShowRow({ show }) {
+  const fromState = useFromState();
   const people = parseJSON(show.people_json).filter((p) => p.person);
   const statuses = parseJSON(show.statuses_json).filter((s) => s.person && s.status);
   const uniqueWatchers = [...new Set(people.map((p) => p.person))];
@@ -113,7 +116,7 @@ function ShowRow({ show }) {
     : null;
 
   return (
-    <Link to={`/title/${show.title_id}`} className="block">
+    <Link to={`/title/${show.title_id}`} state={fromState} className="block">
       <div className="flex gap-3 p-3 bg-slate-800 rounded-xl hover:bg-slate-750 active:bg-slate-700 transition-colors">
         {show.poster_url ? (
           <img
@@ -167,7 +170,19 @@ function ShowRow({ show }) {
 // ── Main page ─────────────────────────────────────────────────────────────────
 export default function WatchLog() {
   const { allPeople: PEOPLE } = useFamily();
-  const [tab, setTab] = useState('movies'); // 'movies' | 'shows'
+  // Tab lives in the URL (?tab=shows) so leaving for a title and coming back —
+  // or refreshing — keeps you on the tab you were on, not the default.
+  const [searchParams, setSearchParams] = useSearchParams();
+  const tab = searchParams.get('tab') === 'shows' ? 'shows' : 'movies'; // 'movies' | 'shows'
+  const setTab = (next) =>
+    setSearchParams(
+      (prev) => {
+        if (next === 'movies') prev.delete('tab');
+        else prev.set('tab', next);
+        return prev;
+      },
+      { replace: true }
+    );
 
   // Movie state
   const [viewings, setViewings] = useState([]);

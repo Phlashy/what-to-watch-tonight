@@ -3,6 +3,7 @@ import { useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 import { useFamily } from '../context/FamilyContext';
 import { parseJSON } from '../utils';
+import { useFromState } from '../lib/useFromState';
 import ShortlistButton from './ShortlistButton';
 
 /**
@@ -19,6 +20,7 @@ export default function WatchCard({
   currentPerson,
 }) {
   const { streamingServiceIds: MY_SERVICE_IDS } = useFamily();
+  const fromState = useFromState();
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
     id: item.id,
   });
@@ -52,7 +54,7 @@ export default function WatchCard({
   // ShortlistButton is rendered OUTSIDE the card link to escape its overflow-hidden clipping.
   // The card gets pr-12 so the title never hides behind the overlaid button.
   const card = (
-    <Link to={`/title/${item.id}`} className="block">
+    <Link to={`/title/${item.id}`} state={fromState} className="block">
       <div className="flex gap-3 bg-slate-800 rounded-xl p-3 pl-10 pr-12 active:bg-slate-700 transition-colors">
         {/* Poster */}
         <div className="flex-shrink-0">

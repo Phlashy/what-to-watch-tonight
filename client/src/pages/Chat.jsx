@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import { Link } from 'react-router-dom';
 import { api } from '../api';
 import { usePerson } from '../context/PersonContext';
+import { useFromState } from '../lib/useFromState';
 
 const SUGGESTIONS = [
   'Whose turn is it to choose?',
@@ -31,6 +32,7 @@ function parseContent(text) {
 }
 
 function MessageContent({ content }) {
+  const fromState = useFromState();
   const parts = parseContent(content);
   return (
     <span className="whitespace-pre-wrap">
@@ -39,6 +41,7 @@ function MessageContent({ content }) {
           <Link
             key={i}
             to={`/title/${part.id}`}
+            state={fromState}
             className="text-amber-400 underline underline-offset-2 hover:text-amber-300"
           >
             {part.title}

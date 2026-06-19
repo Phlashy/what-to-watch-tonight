@@ -1,5 +1,6 @@
 import { Link } from 'react-router-dom';
 import { parseJSON } from '../utils';
+import { useFromState } from '../lib/useFromState';
 
 function StarRating({ rating }) {
   if (!rating) return null;
@@ -29,6 +30,7 @@ function PosterPlaceholder({ title }) {
 
 export default function TitleCard({ item, showStreaming = true, showWatched = true, addedBy }) {
   const genres = parseJSON(item.genre);
+  const fromState = useFromState();
 
   const lastWatchedLabel = item.last_watched
     ? `Last watched ${new Date(item.last_watched).toLocaleDateString('en-CA', { year: 'numeric', month: 'short' })}`
@@ -37,7 +39,7 @@ export default function TitleCard({ item, showStreaming = true, showWatched = tr
       : null;
 
   return (
-    <Link to={`/title/${item.title_id || item.id}`} className="block">
+    <Link to={`/title/${item.title_id || item.id}`} state={fromState} className="block">
       <div className="flex gap-3 bg-slate-800 rounded-xl p-3 hover:bg-slate-750 active:bg-slate-700 transition-colors">
         {/* Poster */}
         <div className="flex-shrink-0">

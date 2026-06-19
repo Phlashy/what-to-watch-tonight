@@ -25,6 +25,12 @@ followed it — see `docs/AUDIT-OUTCOME.md` for the story and the result. Tiers
 - **Persistent chat history** for the Ask tab (kept in `localStorage`).
 - **Scroll position is restored on back/forward navigation** — tapping into a
   title and pressing Back returns you to where you were.
+- **Navigation context is preserved (journey persistence)** — the Watch Log
+  remembers its Movies/Shows tab in the URL (`?tab=shows`), so returning from a
+  show keeps you on the Shows tab; and a title's Back button returns you to the
+  exact screen you opened it from (real browser-back when possible — so scroll is
+  restored too — falling back to the captured origin on a deep link or PWA
+  cold-start, where `navigate(-1)` is unreliable).
 - Optional shared-password authentication (`APP_PASSWORD`), off by default; the
   client shows a password gate when enabled.
 - Configurable CORS allowlist (`CORS_ORIGIN`).

@@ -1,8 +1,20 @@
 # Known Issues
 
-Last updated: 2026-06-09
+Last updated: 2026-06-18
 
 ## Resolved
+
+### Navigation context preserved (2026-06-18)
+
+- **Watch Log tab reset on return** — the Movies/Shows tab was component-local
+  state defaulting to Movies, so returning from a show's detail page dropped you
+  back on Movies. The tab now lives in the URL (`?tab=shows`), restored on
+  back/refresh.
+- **Title Back button could land on a default screen** — the title page relied on
+  `navigate(-1)`, which is unreliable on deep links / PWA cold-starts. It now
+  prefers a real browser-back when there's in-app history (so scroll is restored
+  too) and falls back to the origin captured via `state.from` (a new
+  `useFromState` hook threaded through every link into a title).
 
 ### Post-audit robustness pass (2026-06-09)
 
@@ -111,13 +123,26 @@ Last updated: 2026-06-09
 - `genre` and `cast` stored as JSON strings — normalized tables would improve
   queryability but add complexity.
 
-### Missing Features
+### Missing Features (wishlist)
 
+- **Delete a title in-app** — no UI path; only the `dedup-titles.js` script.
+- **One-tap "we watched this" from a Tonight card** — currently requires the
+  full Log modal. (Smallest-effort, highest daily-use win.)
+- **Streaming / where-to-watch on list, Search & Collection views** — the data
+  is cached on the title and shown on Tonight cards + TitleDetail, but nowhere
+  else.
+- **Per-person "for me" screens** — no "my shortlist / my ratings / my stats"
+  UI surface (the chat can produce stats, but there's no screen for it).
+- **Undo for destructive actions** — delete viewing, remove from list, and the
+  broad finish-a-show list behaviour are all immediate.
 - No search bar on all pages (only on the dedicated Search page).
 - API authentication is opt-in only (`APP_PASSWORD`); off by default, fine for
   LAN use.
-- Episode-level logging for TV shows not yet designed (future: Davin & Gordon
-  intentional watches).
+
+_Decided out of scope (do not revive):_ episode-level logging — the model was
+deliberately changed to log a **watching session of a series** (no per-episode
+granularity), which is implemented and working. An "it's your turn" rotation
+nudge is also not wanted; rotation stays passive.
 
 ### UX
 

@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import { useParams, Link, useNavigate } from 'react-router-dom';
+import { useParams, Link, useNavigate, useLocation } from 'react-router-dom';
 import { api } from '../api';
 import LogViewing from '../components/LogViewing';
 import TMDBPicker from '../components/TMDBPicker';
@@ -35,6 +35,20 @@ export default function TitleDetail() {
   const confirm = useConfirm();
   const { id } = useParams();
   const navigate = useNavigate();
+  const location = useLocation();
+  // Journey persistence — return the user to where they opened this title from.
+  // Prefer a real browser back (a POP) when there's in-app history to pop: that
+  // both lands on the originating screen AND lets ScrollManager restore the
+  // scroll position. Only when there's nothing to pop (a deep link, a PWA
+  // cold-start, or a refresh on this page) do we fall back to the origin URL
+  // captured in `state.from`, then to the home screen as a last resort.
+  // React Router stores its history index on `window.history.state.idx`.
+  const goBack = () => {
+    const idx = window.history.state?.idx ?? 0;
+    if (idx > 0) navigate(-1);
+    else if (location.state?.from) navigate(location.state.from);
+    else navigate('/');
+  };
   const [title, setTitle] = useState(null);
   const [loading, setLoading] = useState(true);
   const [showLog, setShowLog] = useState(false);
@@ -255,7 +269,7 @@ export default function TitleDetail() {
         )}
         <div className="absolute top-0 left-0 right-0 flex items-center gap-3 px-4 pt-14">
           <button
-            onClick={() => navigate(-1)}
+            onClick={goBack}
             aria-label="Go back"
             className="bg-slate-900/80 backdrop-blur rounded-full p-2 text-slate-300 hover:text-white flex-shrink-0"
           >
