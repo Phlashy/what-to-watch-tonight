@@ -4,7 +4,7 @@ Quick links and commands for using and deploying the Movie Night app from anywhe
 
 ## Links
 
-- App (home Wi-Fi):      http://anguspi.local/movie-night/
+- App (home Wi-Fi): http://anguspi.local/movie-night/
 - App (anywhere, HTTPS): https://anguspi.tail485122.ts.net:8443/movie-night/
 
 ## Deploy from anywhere
@@ -21,6 +21,7 @@ Quick links and commands for using and deploying the Movie Night app from anywhe
 ## Pause-on-demand routine (when NordVPN is on)
 
 Mac:
+
 1. Click the NordVPN icon in the menu bar (top-right).
 2. Choose Pause (pick a duration — it auto-resumes after) or Disconnect.
 3. Use Tailscale / the app, then resume Nord when done.
@@ -29,8 +30,8 @@ iPhone: turn NordVPN off in its app, then open the Tailscale app and toggle it o
 
 ## Pi reference
 
-- Tailnet:  tail485122.ts.net
-- Pi name:  anguspi.tail485122.ts.net   (tailnet IP 100.107.76.32)
-- Private HTTPS set up with:  tailscale serve --bg --https=8443 http://127.0.0.1:80
-- To remove it:               tailscale serve --https=8443 off
+- Tailnet: tail485122.ts.net
+- Pi name: anguspi.tail485122.ts.net (tailnet IP 100.107.76.32)
+- Private HTTPS set up with: tailscale serve --bg --https=8443 http://127.0.0.1:80
+- To remove it: tailscale serve --https=8443 off
 - The public Funnel on :443 belongs to a different project — leave it alone.
