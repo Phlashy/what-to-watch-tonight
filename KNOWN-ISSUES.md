@@ -4,6 +4,17 @@ Last updated: 2026-06-22
 
 ## Resolved
 
+### iOS form zoom & search scroll (2026-06-22)
+
+- **Edit forms ran off-screen to the right** — iOS Safari zooms the page in when
+  you focus a text field smaller than 16px; the inputs were `text-sm` (14px), so
+  every edit form zoomed and spilled right. Fixed by forcing form controls to
+  16px on phone widths (`@media (max-width: 640px)` in `index.css`); desktop is
+  unchanged.
+- **Search results appeared scrolled partway down** — the keyboard/focus could
+  leave the results list scrolled past the first (best) match. The Search page now
+  scrolls back to the top whenever a new search runs.
+
 ### iOS top safe-area — buttons hidden under the status bar (2026-06-22)
 
 - **Back/close buttons sat behind the iPhone clock & battery** — the app renders

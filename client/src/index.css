@@ -14,6 +14,20 @@
   }
 }
 
+/* iOS Safari zooms the whole page in whenever you focus a text field whose
+   font-size is under 16px — which made every edit form "run off to the right"
+   on iPhone. Our inputs are text-sm (14px). Force 16px on phones so iOS leaves
+   the zoom alone. Scoped to phone widths and to real text fields (buttons/
+   checkboxes don't trigger the zoom), so desktop and the rest of the UI are
+   untouched. !important is needed to beat Tailwind's text-sm utility class. */
+@media (max-width: 640px) {
+  input:not([type='checkbox']):not([type='radio']):not([type='range']),
+  select,
+  textarea {
+    font-size: 16px !important;
+  }
+}
+
 @layer utilities {
   /* Clears the iPhone status bar / notch / Dynamic Island so top bars and
      back/close buttons aren't hidden under the clock & battery. The base

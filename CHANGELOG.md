@@ -115,6 +115,15 @@ followed it — see `docs/AUDIT-OUTCOME.md` for the story and the result. Tiers
 
 ### Fixed
 
+- **Edit forms zoomed and ran off-screen on iPhone** — iOS Safari auto-zooms the
+  page whenever a focused text field has a font-size under 16px, and the form
+  inputs were `text-sm` (14px). Focusing any field zoomed the layout so it spilled
+  off to the right. Form controls are now forced to 16px on phone widths
+  (`@media (max-width: 640px)` in `index.css`), which stops the zoom; desktop and
+  the rest of the UI are unchanged.
+- **Search results landed scrolled partway down on iPhone** — after a search, the
+  keyboard/focus could leave the list scrolled past the top, hiding the best
+  match. The Search page now snaps back to the top each time a new search runs.
 - **Top bars hidden under the iPhone status bar (iOS PWA)** — the app draws
   edge-to-edge (`viewport-fit=cover` + a translucent status bar), but the top
   headers and the title page's Back button used fixed top padding (`pt-12` /

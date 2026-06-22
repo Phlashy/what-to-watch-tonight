@@ -218,6 +218,10 @@ export default function Search() {
     const timer = setTimeout(() => {
       doLocalSearch();
       doTmdbSearch();
+      // Snap back to the top so the best match (first result) is visible. On
+      // iOS the keyboard/focus can otherwise leave the list scrolled partway
+      // down, hiding the top results.
+      window.scrollTo({ top: 0 });
     }, 300);
     return () => clearTimeout(timer);
   }, [query, doLocalSearch, doTmdbSearch]);
