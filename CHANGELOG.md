@@ -115,6 +115,14 @@ followed it — see `docs/AUDIT-OUTCOME.md` for the story and the result. Tiers
 
 ### Fixed
 
+- **Top bars hidden under the iPhone status bar (iOS PWA)** — the app draws
+  edge-to-edge (`viewport-fit=cover` + a translucent status bar), but the top
+  headers and the title page's Back button used fixed top padding (`pt-12` /
+  `pt-14`) that didn't account for the notch/Dynamic Island, so on a notched
+  iPhone the back/close controls sat behind the clock & battery and were hard to
+  tap. Added a `pt-safe` utility (`calc(0.75rem + env(safe-area-inset-top))`) and
+  applied it to every top bar; the inset is `0` on desktop so nothing changes
+  there. The bottom safe area was already handled.
 - **`PUT /api/titles/:id` returned 500** (in-app title rename was broken): the
   reserved word `cast` was unquoted and parsed as the CAST operator.
 - Marking a show finished/dropped no longer empties shared lists for everyone —

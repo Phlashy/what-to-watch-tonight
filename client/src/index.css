@@ -15,6 +15,13 @@
 }
 
 @layer utilities {
+  /* Clears the iPhone status bar / notch / Dynamic Island so top bars and
+     back/close buttons aren't hidden under the clock & battery. The base
+     0.75rem is breathing room; env(safe-area-inset-top) is the real device
+     inset (0 on devices without one, e.g. desktop). */
+  .pt-safe {
+    padding-top: calc(0.75rem + env(safe-area-inset-top));
+  }
   .safe-bottom {
     padding-bottom: env(safe-area-inset-bottom);
   }

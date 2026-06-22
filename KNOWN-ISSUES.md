@@ -1,8 +1,19 @@
 # Known Issues
 
-Last updated: 2026-06-18
+Last updated: 2026-06-22
 
 ## Resolved
+
+### iOS top safe-area — buttons hidden under the status bar (2026-06-22)
+
+- **Back/close buttons sat behind the iPhone clock & battery** — the app renders
+  edge-to-edge (`viewport-fit=cover` and a translucent status bar in `index.html`),
+  so top content draws under the status bar. The bottom safe area was handled, but
+  the top used fixed paddings (`pt-12` / `pt-14`) that didn't match the notch /
+  Dynamic Island inset, leaving the top controls unreachable on a notched iPhone
+  (reported on an iPhone 14). Fixed with a `pt-safe` utility
+  (`calc(0.75rem + env(safe-area-inset-top))`) applied to every top bar; the inset
+  resolves to `0` on non-notched / desktop, so layout there is unchanged.
 
 ### Navigation context preserved (2026-06-18)
 

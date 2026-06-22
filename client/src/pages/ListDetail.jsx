@@ -167,7 +167,7 @@ export default function ListDetail() {
   if (loading)
     return (
       <div className="pb-safe">
-        <div className="px-4 pt-16 space-y-3">
+        <div className="px-4 pt-safe space-y-3">
           {[1, 2, 3, 4].map((i) => (
             <div key={i} className="bg-slate-800 rounded-xl h-24 animate-pulse" />
           ))}
@@ -181,7 +181,7 @@ export default function ListDetail() {
   return (
     <div className="pb-safe">
       <div className="bg-slate-950 sticky top-0 z-10 border-b border-slate-800/50">
-        <div className="px-4 pt-12 pb-4">
+        <div className="px-4 pt-safe pb-4">
           <div className="flex items-center gap-3">
             <Link
               to="/lists"

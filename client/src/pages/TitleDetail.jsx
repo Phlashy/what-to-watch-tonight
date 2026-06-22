@@ -229,7 +229,7 @@ export default function TitleDetail() {
 
   if (loading)
     return (
-      <div className="pb-safe px-4 pt-16">
+      <div className="pb-safe px-4 pt-safe">
         <div className="bg-slate-800 rounded-2xl h-48 animate-pulse mb-4" />
         <div className="space-y-3">
           {[1, 2].map((i) => (
@@ -239,7 +239,7 @@ export default function TitleDetail() {
       </div>
     );
 
-  if (!title) return <div className="px-4 pt-16 text-slate-400">Not found</div>;
+  if (!title) return <div className="px-4 pt-safe text-slate-400">Not found</div>;
 
   const cast = parseJSON(title.cast);
   const genres = parseJSON(title.genre);
@@ -267,7 +267,7 @@ export default function TitleDetail() {
             <div className="absolute inset-0 bg-gradient-to-t from-slate-950 via-slate-950/60 to-transparent" />
           </div>
         )}
-        <div className="absolute top-0 left-0 right-0 flex items-center gap-3 px-4 pt-14">
+        <div className="absolute top-0 left-0 right-0 flex items-center gap-3 px-4 pt-safe">
           <button
             onClick={goBack}
             aria-label="Go back"
@@ -285,7 +285,7 @@ export default function TitleDetail() {
         </div>
 
         <div
-          className={`px-4 ${title.poster_url ? 'absolute bottom-0 left-0 right-0 pb-4' : 'pt-16 pb-4'}`}
+          className={`px-4 ${title.poster_url ? 'absolute bottom-0 left-0 right-0 pb-4' : 'pt-[calc(4rem+env(safe-area-inset-top))] pb-4'}`}
         >
           <div className="flex items-end gap-3">
             {title.poster_url && (

@@ -205,7 +205,7 @@ export default function WhatToWatch() {
     <div className="pb-safe">
       {/* Header */}
       <div className="bg-slate-950 sticky top-0 z-10 border-b border-slate-800/50">
-        <div className="px-4 pt-12 pb-3">
+        <div className="px-4 pt-safe pb-3">
           <div className="flex items-center justify-between mb-3">
             <div>
               <h1 className="text-2xl font-bold text-white">Tonight</h1>

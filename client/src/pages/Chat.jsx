@@ -130,7 +130,7 @@ export default function Chat() {
     <div className="pb-safe flex flex-col" style={{ height: '100dvh' }}>
       {/* Header */}
       <div className="bg-slate-950 sticky top-0 z-10 border-b border-slate-800/50 flex-shrink-0">
-        <div className="px-4 pt-12 pb-3">
+        <div className="px-4 pt-safe pb-3">
           <div className="flex items-center justify-between">
             <div>
               <h1 className="text-2xl font-bold text-white">Ask</h1>

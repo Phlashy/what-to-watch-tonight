@@ -243,7 +243,7 @@ export default function Search() {
   return (
     <div className="pb-safe">
       {/* Search header */}
-      <div className="sticky top-0 bg-slate-950/95 backdrop-blur-sm px-4 pt-14 pb-3 z-10 border-b border-slate-800/50">
+      <div className="sticky top-0 bg-slate-950/95 backdrop-blur-sm px-4 pt-safe pb-3 z-10 border-b border-slate-800/50">
         <div className="relative">
           <svg
             className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500"

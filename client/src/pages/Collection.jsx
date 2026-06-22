@@ -56,7 +56,7 @@ export default function Collection() {
   return (
     <div className="pb-safe">
       <div className="bg-slate-950 sticky top-0 z-10 border-b border-slate-800/50">
-        <div className="px-4 pt-12 pb-3">
+        <div className="px-4 pt-safe pb-3">
           <h1 className="text-2xl font-bold text-white">My Collection</h1>
           <p className="text-xs text-slate-500 mt-0.5">
             {items.length} title{items.length !== 1 ? 's' : ''}
