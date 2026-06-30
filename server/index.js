@@ -59,6 +59,7 @@ app.use('/api/titles', require('./routes/titles'));
 app.use('/api/viewings', require('./routes/viewings'));
 app.use('/api/lists', require('./routes/lists'));
 app.use('/api/tmdb', require('./routes/tmdb'));
+app.use('/api/ratings', require('./routes/ratings'));
 app.use('/api/shortlists', require('./routes/shortlists'));
 app.use('/api/collection', require('./routes/collection'));
 app.use('/api/chat', require('./routes/chat').router);

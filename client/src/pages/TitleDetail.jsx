@@ -3,6 +3,7 @@ import { useParams, Link, useNavigate, useLocation } from 'react-router-dom';
 import { api } from '../api';
 import LogViewing from '../components/LogViewing';
 import TMDBPicker from '../components/TMDBPicker';
+import RatingsPicker from '../components/RatingsPicker';
 import ViewingItem from '../components/ViewingItem';
 import EditableTitle from '../components/EditableTitle';
 import AddToListSheet from '../components/AddToListSheet';
@@ -53,6 +54,7 @@ export default function TitleDetail() {
   const [loading, setLoading] = useState(true);
   const [showLog, setShowLog] = useState(false);
   const [showTMDB, setShowTMDB] = useState(false);
+  const [showRatings, setShowRatings] = useState(false);
   const [showAddToList, setShowAddToList] = useState(false);
   const [watchProviders, setWatchProviders] = useState(null);
   const [watchProvidersUpdatedAt, setWatchProvidersUpdatedAt] = useState(null);
@@ -304,6 +306,15 @@ export default function TitleDetail() {
                     <span>·</span>
                     <span>{title.runtime_minutes}m</span>
                   </>
+                )}
+                {title.rt_score != null && (
+                  <span
+                    className="flex items-center gap-1 text-red-400 font-medium"
+                    title="Rotten Tomatoes (Tomatometer)"
+                  >
+                    <span aria-hidden="true">🍅</span>
+                    {title.rt_score}%
+                  </span>
                 )}
                 {avgRating && (
                   <span className="flex items-center gap-0.5 text-amber-400 font-medium">
@@ -734,25 +745,6 @@ export default function TitleDetail() {
             </svg>
             Own it
           </button>
-          <button
-            onClick={() => setShowTMDB(true)}
-            className="bg-slate-800 hover:bg-slate-700 text-slate-300 text-sm py-2.5 px-3 rounded-xl transition-colors flex items-center justify-center"
-            title={title.tmdb_id ? 'Fix TMDB match' : 'Find on TMDB'}
-          >
-            <svg
-              className="w-4 h-4 text-slate-400"
-              fill="none"
-              viewBox="0 0 24 24"
-              stroke="currentColor"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
-              />
-            </svg>
-          </button>
           {title.tmdb_id && (
             <a
               href={`https://www.themoviedb.org/${title.type === 'show' ? 'tv' : 'movie'}/${title.tmdb_id}`}
@@ -776,6 +768,52 @@ export default function TitleDetail() {
               </svg>
             </a>
           )}
+        </div>
+
+        {/* Sources — make the TMDB + ratings fixes discoverable */}
+        <div>
+          <h3 className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2">
+            Sources
+          </h3>
+          <div className="space-y-2">
+            <div className="flex items-center gap-3 bg-slate-800/50 rounded-xl px-3 py-2.5">
+              <div className="flex-1 min-w-0">
+                <p className="text-sm text-slate-300 font-medium">TMDB match</p>
+                <p className="text-xs text-slate-500 truncate">
+                  {title.tmdb_id
+                    ? `${title.type === 'show' ? 'TV show' : 'Movie'} · #${title.tmdb_id}`
+                    : 'Not matched yet'}
+                </p>
+              </div>
+              <button
+                onClick={() => setShowTMDB(true)}
+                className="text-sm text-amber-400 hover:text-amber-300 font-medium px-2.5 py-1 -mr-1.5"
+              >
+                {title.tmdb_id ? 'Fix match' : 'Find'}
+              </button>
+            </div>
+            <div className="flex items-center gap-3 bg-slate-800/50 rounded-xl px-3 py-2.5">
+              <div className="flex-1 min-w-0">
+                <p className="text-sm text-slate-300 font-medium">Ratings</p>
+                <p className="text-xs text-slate-500 truncate">
+                  {title.rt_score != null || title.imdb_rating != null
+                    ? [
+                        title.rt_score != null ? `🍅 ${title.rt_score}%` : null,
+                        title.imdb_rating != null ? `IMDb ${title.imdb_rating}` : null,
+                      ]
+                        .filter(Boolean)
+                        .join(' · ')
+                    : 'No Rotten Tomatoes score'}
+                </p>
+              </div>
+              <button
+                onClick={() => setShowRatings(true)}
+                className="text-sm text-amber-400 hover:text-amber-300 font-medium px-2.5 py-1 -mr-1.5"
+              >
+                Fix
+              </button>
+            </div>
+          </div>
         </div>
 
         {/* Collection — inline form + owned items, always accessible */}
@@ -951,6 +989,16 @@ export default function TitleDetail() {
             setShowTMDB(false);
             loadTitle();
           }}
+        />
+      )}
+
+      {showRatings && (
+        <RatingsPicker
+          title={title}
+          onClose={() => setShowRatings(false)}
+          // Update in place rather than loadTitle() — the latter flips the page's
+          // loading spinner, which would unmount this modal and wipe its result.
+          onUpdated={(updated) => setTitle(updated)}
         />
       )}
     </div>

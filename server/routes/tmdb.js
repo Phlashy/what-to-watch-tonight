@@ -1,8 +1,10 @@
 const express = require('express');
 const router = express.Router();
+const { getImdbIdFromTmdb, fetchOmdbRatings } = require('../lib/ratings');
 
 const TMDB_BASE = 'https://api.themoviedb.org/3';
 const API_KEY = process.env.TMDB_API_KEY;
+const OMDB_API_KEY = process.env.OMDB_API_KEY;
 
 // Shared timeout so a hung TMDB request can't hang ours indefinitely.
 const fetchTmdb = (url) => fetch(url, { signal: AbortSignal.timeout(10000) });
@@ -136,6 +138,30 @@ router.post('/enrich/:titleId', async (req, res, next) => {
       synopsis,
       req.params.titleId
     );
+
+    // Ratings are keyed off the IMDb id, which comes from this TMDB match — so a
+    // re-match can change which RT/IMDb/Metacritic scores are correct. Refresh
+    // them best-effort: a failure here must not undo a successful TMDB fix.
+    if (OMDB_API_KEY) {
+      try {
+        const imdbId = details.imdb_id || (await getImdbIdFromTmdb(searchId, correctType, API_KEY));
+        if (imdbId) {
+          const ratings = await fetchOmdbRatings(imdbId, OMDB_API_KEY);
+          db.prepare(
+            `UPDATE titles SET imdb_id = ?, rt_score = ?, imdb_rating = ?, metacritic_score = ?,
+               ratings_updated_at = CURRENT_TIMESTAMP WHERE id = ?`
+          ).run(
+            imdbId,
+            ratings?.rt ?? null,
+            ratings?.imdb ?? null,
+            ratings?.metacritic ?? null,
+            req.params.titleId
+          );
+        }
+      } catch {
+        /* best effort — leave existing ratings untouched */
+      }
+    }
 
     res.json(db.prepare('SELECT * FROM titles WHERE id = ?').get(req.params.titleId));
   } catch (e) {

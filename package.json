@@ -17,6 +17,7 @@
     "prod:logs": "npx pm2 logs movie-night --lines 50",
     "import": "node seed-data/import.js",
     "enrich": "node scripts/enrich-tmdb.js",
+    "enrich:ratings": "node scripts/enrich-ratings.js",
     "dedup": "node scripts/dedup-titles.js",
     "backfill-added-by": "node scripts/backfill-added-by.js",
     "icons": "node scripts/generate-icons.js",
