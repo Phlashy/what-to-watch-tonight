@@ -93,7 +93,7 @@ export default function EditListModal({ list, onClose, onSaved }) {
       aria-modal="true"
       aria-label="Edit list"
     >
-      <div className="bg-slate-900 rounded-t-2xl sm:rounded-2xl w-full sm:max-w-sm">
+      <div className="bg-slate-900 rounded-t-2xl sm:rounded-2xl w-full sm:max-w-sm max-h-[90vh] overflow-y-auto">
         <div className="px-4 pt-4 pb-modal-safe">
           <div className="flex items-center justify-between mb-4">
             <h2 className="text-lg font-bold">Edit List</h2>

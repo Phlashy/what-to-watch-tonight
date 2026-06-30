@@ -73,7 +73,7 @@ export default function AddToListSheet({ titleId, currentMemberships, onClose, o
       aria-label="Add to list"
     >
       <div
-        className="bg-slate-900 rounded-t-2xl sm:rounded-2xl w-full sm:max-w-sm"
+        className="bg-slate-900 rounded-t-2xl sm:rounded-2xl w-full sm:max-w-sm max-h-[90vh] overflow-y-auto"
         onClick={(e) => e.stopPropagation()}
       >
         <div className="px-4 pt-4 pb-modal-safe">

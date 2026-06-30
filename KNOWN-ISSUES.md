@@ -1,8 +1,16 @@
 # Known Issues
 
-Last updated: 2026-06-22
+Last updated: 2026-06-29
 
 ## Resolved
+
+### iOS bottom-sheet close button unreachable (2026-06-29)
+
+- **"Add to list" ✕ couldn't be tapped** — the Add-to-list / Edit-list / New-list
+  bottom sheets had no `max-height`, so with many lists the sheet grew taller than
+  the screen; anchored to the bottom (`items-end`), its top and the ✕ were pushed
+  off the top / under the status bar. Capped at `max-h-[90vh]` with internal
+  scrolling (matching the Log-a-viewing modal), keeping the header + ✕ on-screen.
 
 ### iOS form zoom & search scroll (2026-06-22)
 

@@ -115,6 +115,12 @@ followed it — see `docs/AUDIT-OUTCOME.md` for the story and the result. Tiers
 
 ### Fixed
 
+- **"Add to list" close (✕) unreachable on iPhone** — the bottom sheets that lack
+  their own height cap (Add-to-list, Edit list, New list) had no `max-height`, so
+  with many lists the sheet grew taller than the screen and, because it's anchored
+  to the bottom, its top — and the ✕ — was pushed up off-screen / under the status
+  bar. Capped these sheets at `max-h-[90vh]` with internal scrolling, matching the
+  Log-a-viewing modal, so the header and ✕ stay on-screen and the list scrolls.
 - **Edit forms zoomed and ran off-screen on iPhone** — iOS Safari auto-zooms the
   page whenever a focused text field has a font-size under 16px, and the form
   inputs were `text-sm` (14px). Focusing any field zoomed the layout so it spilled
