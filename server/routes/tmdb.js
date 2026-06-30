@@ -140,26 +140,40 @@ router.post('/enrich/:titleId', async (req, res, next) => {
     );
 
     // Ratings are keyed off the IMDb id, which comes from this TMDB match — so a
-    // re-match can change which RT/IMDb/Metacritic scores are correct. Refresh
-    // them best-effort: a failure here must not undo a successful TMDB fix.
-    if (OMDB_API_KEY) {
+    // re-match can change which scores are correct (or make old ones plain wrong).
+    // First, unconditionally store the new IMDb id and CLEAR the old ratings,
+    // leaving ratings_updated_at = NULL. That's the source of truth the nightly
+    // backfill cron looks for, so even if the immediate refresh below can't run
+    // (e.g. OMDb daily quota exhausted) the title is correctly queued for re-pull.
+    let imdbId = null;
+    try {
+      imdbId = details.imdb_id || (await getImdbIdFromTmdb(searchId, correctType, API_KEY));
+    } catch {
+      /* TMDB external_ids hiccup — cron will re-derive from the new tmdb_id */
+    }
+    db.prepare(
+      `UPDATE titles SET imdb_id = ?, rt_score = NULL, imdb_rating = NULL,
+         metacritic_score = NULL, ratings_updated_at = NULL WHERE id = ?`
+    ).run(imdbId, req.params.titleId);
+
+    // Best-effort immediate refresh; on any failure the row stays queued (NULL)
+    // for the cron. A definitive "OMDb has no record" still stamps the timestamp
+    // so we don't retry it forever.
+    if (OMDB_API_KEY && imdbId) {
       try {
-        const imdbId = details.imdb_id || (await getImdbIdFromTmdb(searchId, correctType, API_KEY));
-        if (imdbId) {
-          const ratings = await fetchOmdbRatings(imdbId, OMDB_API_KEY);
+        const ratings = await fetchOmdbRatings(imdbId, OMDB_API_KEY);
+        if (ratings) {
           db.prepare(
-            `UPDATE titles SET imdb_id = ?, rt_score = ?, imdb_rating = ?, metacritic_score = ?,
+            `UPDATE titles SET rt_score = ?, imdb_rating = ?, metacritic_score = ?,
                ratings_updated_at = CURRENT_TIMESTAMP WHERE id = ?`
-          ).run(
-            imdbId,
-            ratings?.rt ?? null,
-            ratings?.imdb ?? null,
-            ratings?.metacritic ?? null,
+          ).run(ratings.rt, ratings.imdb, ratings.metacritic, req.params.titleId);
+        } else {
+          db.prepare('UPDATE titles SET ratings_updated_at = CURRENT_TIMESTAMP WHERE id = ?').run(
             req.params.titleId
           );
         }
       } catch {
-        /* best effort — leave existing ratings untouched */
+        /* quota/network — leave NULL so the nightly cron retries */
       }
     }
 
