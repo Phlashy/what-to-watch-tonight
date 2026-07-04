@@ -3,8 +3,10 @@ import { api } from '../api';
 import { usePerson } from '../context/PersonContext';
 import { useFamily } from '../context/FamilyContext';
 import { useOnEscape } from '../lib/a11y';
+// family_movie_night is intentionally NOT here — it has its own prominent toggle
+// near the top of the form (it drives the choosing rotation, so it shouldn't be
+// buried among incidental tags).
 const COMMON_TAGS = [
-  'family_movie_night',
   'solo',
   'cinema',
   'plane',
@@ -16,7 +18,13 @@ const COMMON_TAGS = [
   'unfinished',
 ];
 
-export default function LogViewing({ titleId, titleName, onClose, onSaved }) {
+export default function LogViewing({
+  titleId,
+  titleName,
+  defaultMovieNight = false,
+  onClose,
+  onSaved,
+}) {
   const { currentPerson } = usePerson();
   const { allPeople: PEOPLE, memberNames } = useFamily();
   const [pickedBy, setPickedBy] = useState(currentPerson ? [currentPerson] : []);
@@ -26,7 +34,7 @@ export default function LogViewing({ titleId, titleName, onClose, onSaved }) {
     date_precision: 'day',
     rating: '',
     notes: '',
-    tags: [],
+    tags: defaultMovieNight ? ['family_movie_night'] : [],
     // Pre-select current person if they're a known family member
     people:
       currentPerson && PEOPLE.includes(currentPerson)
@@ -44,9 +52,14 @@ export default function LogViewing({ titleId, titleName, onClose, onSaved }) {
   useEffect(() => {
     api('/api/family-rotation')
       .then((r) => r.json())
-      .then(setRotation)
+      .then((rot) => {
+        setRotation(rot);
+        // Opened pre-tagged as a movie night → default the chooser to whose turn
+        // it is (mirrors what toggleTag does when you switch it on manually).
+        if (defaultMovieNight && rot?.nextChooser) setPickedBy([rot.nextChooser]);
+      })
       .catch(() => {});
-  }, []);
+  }, [defaultMovieNight]);
 
   useEffect(() => {
     if (!titleId && searchQuery.length > 1) {
@@ -320,6 +333,44 @@ export default function LogViewing({ titleId, titleName, onClose, onSaved }) {
               </button>
             </div>
           </div>
+
+          {/* Family movie night — prominent toggle (drives the choosing rotation),
+              lifted out of the incidental Tags row so it's never missed. */}
+          {selectedTitleId && (
+            <div className="mb-4">
+              <button
+                type="button"
+                onClick={() => toggleTag('family_movie_night')}
+                aria-pressed={form.tags.includes('family_movie_night')}
+                className={`w-full flex items-center justify-between gap-3 px-3 py-2.5 rounded-xl border transition-colors ${
+                  form.tags.includes('family_movie_night')
+                    ? 'bg-amber-500/15 border-amber-500/40 text-amber-300'
+                    : 'bg-slate-800 border-slate-700 text-slate-300 hover:bg-slate-700'
+                }`}
+              >
+                <span className="flex items-center gap-2">
+                  <span aria-hidden="true">🍿</span>
+                  <span className="text-sm font-medium">Family movie night</span>
+                </span>
+                <span
+                  className={`relative inline-flex h-5 w-9 flex-shrink-0 items-center rounded-full transition-colors ${
+                    form.tags.includes('family_movie_night') ? 'bg-amber-500' : 'bg-slate-600'
+                  }`}
+                >
+                  <span
+                    className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+                      form.tags.includes('family_movie_night') ? 'translate-x-4' : 'translate-x-0.5'
+                    }`}
+                  />
+                </span>
+              </button>
+              {form.tags.includes('family_movie_night') && (
+                <p className="text-[11px] text-slate-500 mt-1 px-1">
+                  Advances the choosing rotation to the next person.
+                </p>
+              )}
+            </div>
+          )}
 
           {/* Picked by — right after date so it's always visible on mobile without scrolling */}
           {selectedTitleId && (

@@ -962,6 +962,9 @@ export default function TitleDetail() {
         <LogViewing
           titleId={title.id}
           titleName={title.title}
+          // A title on the Movie Night list → logging it is almost always the
+          // family movie night, so pre-tag it (user can still toggle off).
+          defaultMovieNight={title.listMemberships?.some((l) => l.name === 'family_to_watch')}
           onClose={() => setShowLog(false)}
           onSaved={() => {
             setShowLog(false);

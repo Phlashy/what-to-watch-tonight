@@ -12,6 +12,18 @@
       "runtimeExecutable": "npm",
       "runtimeArgs": ["--prefix", "server", "run", "dev"],
       "port": 3001
+    },
+    {
+      "name": "dead-donkey",
+      "runtimeExecutable": "python3",
+      "runtimeArgs": [
+        "-m",
+        "http.server",
+        "8471",
+        "-d",
+        "/Users/gordoncasey/Library/CloudStorage/Dropbox/Claude Code - Not Donkey Kong/dead-donkey"
+      ],
+      "port": 8471
     }
   ]
 }
