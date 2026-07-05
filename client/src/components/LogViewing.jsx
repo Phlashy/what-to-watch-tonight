@@ -6,6 +6,13 @@ import { useOnEscape } from '../lib/a11y';
 // family_movie_night is intentionally NOT here — it has its own prominent toggle
 // near the top of the form (it drives the choosing rotation, so it shouldn't be
 // buried among incidental tags).
+// Today's date as YYYY-MM-DD in the *viewer's* timezone. NOT new Date().toISOString()
+// — that's UTC, which rolls over to "tomorrow" on Pacific-evening logs.
+function todayLocal() {
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+}
+
 const COMMON_TAGS = [
   'solo',
   'cinema',
@@ -30,7 +37,7 @@ export default function LogViewing({
   const [pickedBy, setPickedBy] = useState(currentPerson ? [currentPerson] : []);
   const [rotation, setRotation] = useState(null);
   const [form, setForm] = useState(() => ({
-    date: new Date().toISOString().split('T')[0],
+    date: todayLocal(),
     date_precision: 'day',
     rating: '',
     notes: '',
@@ -318,7 +325,7 @@ export default function LogViewing({
                       ? {
                           ...f,
                           date_precision: 'day',
-                          date: new Date().toISOString().split('T')[0],
+                          date: todayLocal(),
                         }
                       : { ...f, date_precision: 'in_progress', date: '' }
                   )
