@@ -1,5 +1,6 @@
 import { NavLink } from 'react-router-dom';
 import { usePerson } from '../context/PersonContext';
+import { useFamily } from '../context/FamilyContext';
 import PixelAvatar from './PixelAvatar';
 
 const tabs = [
@@ -98,12 +99,14 @@ const tabs = [
 
 export default function NavBar() {
   const { currentPerson, openPicker } = usePerson();
+  const family = useFamily();
   const hasAvatar = !!currentPerson;
+  const visibleTabs = family?.chatEnabled === false ? tabs.filter((t) => t.to !== '/chat') : tabs;
 
   return (
     <nav className="fixed bottom-0 left-0 right-0 bg-slate-900 border-t border-slate-800 safe-bottom z-50">
       <div className="flex items-stretch">
-        {tabs.map((tab) => (
+        {visibleTabs.map((tab) => (
           <NavLink key={tab.to} to={tab.to} end={tab.to === '/'} className="flex-1">
             {({ isActive }) => (
               <div
