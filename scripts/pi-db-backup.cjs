@@ -24,7 +24,11 @@ try {
 }
 
 const KEEP = Number(process.env.KEEP_BACKUPS || 14);
-const dataDir = path.join(os.homedir(), 'movie-night-data');
+// Second instances point this at their own data dir, e.g.
+//   WTWT_DATA_DIR=~/movie-night-montreal-data node scripts/pi-db-backup.cjs
+const dataDir = process.env.WTWT_DATA_DIR
+  ? process.env.WTWT_DATA_DIR.replace(/^~/, os.homedir())
+  : path.join(os.homedir(), 'movie-night-data');
 const srcDb = path.join(dataDir, 'movies.db');
 const backupDir = path.join(dataDir, 'backups');
 

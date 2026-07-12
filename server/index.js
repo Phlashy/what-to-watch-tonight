@@ -51,8 +51,13 @@ app.use('/api', require('./lib/auth').requireAuth(process.env.APP_PASSWORD));
 // Rate-limit the chat endpoint (it calls the paid Anthropic API).
 app.use('/api/chat', require('./lib/rate-limit').rateLimit({ windowMs: 60000, max: 20 }));
 
-// Family config endpoint
-app.get('/api/config', (req, res) => res.json(familyConfig));
+// Family config endpoint. `chatEnabled` tells the client whether to show the
+// Ask tab — instances without an Anthropic key (e.g. a relative's install)
+// simply hide it rather than showing a tab that can only error.
+const chatEnabled = Boolean(
+  process.env.ANTHROPIC_API_KEY && process.env.ANTHROPIC_API_KEY !== 'your-key-here'
+);
+app.get('/api/config', (req, res) => res.json({ ...familyConfig, chatEnabled }));
 
 // Routes
 app.use('/api/titles', require('./routes/titles'));

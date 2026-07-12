@@ -64,6 +64,9 @@ export function FamilyProvider({ children }) {
       contexts: config.contexts,
       lists: config.lists,
       streamingServiceIds: new Set(config.streamingServiceIds || []),
+      // Servers without an Anthropic key report chatEnabled: false; treat
+      // anything else (true/undefined from older servers) as enabled.
+      chatEnabled: config.chatEnabled !== false,
       contextListMap,
       listToContext,
       getAvatar: (name) => avatarMap[name] || null,

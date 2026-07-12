@@ -11,8 +11,18 @@ fi
 PROJECT_DIR="$(cd "$(dirname "$0")/.." && pwd)"
 cd "$PROJECT_DIR"
 
+# Which pm2 app is this checkout? Second instances (e.g. the Montreal copy)
+# set WTWT_PM2_NAME=... and PORT=... in their .env; the main checkout sets
+# neither and gets the original defaults.
+if [ -z "$WTWT_PM2_NAME" ] && [ -f .env ]; then
+  WTWT_PM2_NAME="$(grep -E '^WTWT_PM2_NAME=' .env | tail -1 | cut -d= -f2-)"
+fi
+export WTWT_PM2_NAME="${WTWT_PM2_NAME:-movie-night}"
+APP_PORT="$(grep -E '^PORT=' .env 2>/dev/null | tail -1 | cut -d= -f2-)"
+APP_PORT="${APP_PORT:-3001}"
+
 echo ""
-echo "🎬 Movie Night Deploy"
+echo "🎬 Movie Night Deploy (${WTWT_PM2_NAME})"
 echo ""
 
 # Step 1: Build client
@@ -28,7 +38,7 @@ fi
 
 # Step 2: Start or restart pm2
 echo "[2/3] Starting production server..."
-if $PM2 describe movie-night > /dev/null 2>&1; then
+if $PM2 describe "$WTWT_PM2_NAME" > /dev/null 2>&1; then
   $PM2 restart ecosystem.config.js --silent
   echo "   ✓ Restarted pm2 process"
 else
@@ -40,5 +50,5 @@ fi
 echo "[3/3] Status:"
 $PM2 list
 echo ""
-echo "✓ Deploy complete → http://localhost:3001/"
+echo "✓ Deploy complete → http://localhost:${APP_PORT}/"
 echo ""

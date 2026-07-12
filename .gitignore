@@ -32,6 +32,9 @@ npm-debug.log*
 
 # Family config (personal — use family.config.example.json as template)
 family.config.json
+# ...but DO track the Montreal instance's config template (the bare pattern
+# above matches at any depth, so it needs an explicit exception)
+!seed-data/montreal/family.config.json
 
 # Personal data files (not for public repo)
 seed-data/final_consolidated.json

@@ -1,0 +1,46 @@
+{
+  "comment": "Starter titles for the Montreal instance. Consumed by scripts/seed-lists.js; run `npm run enrich` afterwards to pull TMDB posters/metadata. List names must match family.config.json.",
+  "lists": [
+    {
+      "name": "family_to_watch",
+      "displayName": "Family Movie Night",
+      "description": "Movies to watch all together",
+      "items": [
+        { "title": "Spider-Man: Into the Spider-Verse", "year": 2018, "type": "movie" },
+        { "title": "The Princess Bride", "year": 1987, "type": "movie" },
+        { "title": "Back to the Future", "year": 1985, "type": "movie" },
+        { "title": "Paddington 2", "year": 2017, "type": "movie" },
+        { "title": "The Incredibles", "year": 2004, "type": "movie" },
+        { "title": "Jumanji: Welcome to the Jungle", "year": 2017, "type": "movie" },
+        { "title": "School of Rock", "year": 2003, "type": "movie" },
+        { "title": "How to Train Your Dragon", "year": 2010, "type": "movie" },
+        { "title": "Ghostbusters", "year": 1984, "type": "movie" },
+        { "title": "The Goonies", "year": 1985, "type": "movie" }
+      ]
+    },
+    {
+      "name": "film_buff",
+      "displayName": "Film Buff Stuff",
+      "description": "Big-screen greats worth seeing at least once",
+      "items": [
+        { "title": "Jaws", "year": 1975, "type": "movie" },
+        { "title": "Raiders of the Lost Ark", "year": 1981, "type": "movie" },
+        { "title": "E.T. the Extra-Terrestrial", "year": 1982, "type": "movie" },
+        { "title": "Singin' in the Rain", "year": 1952, "type": "movie" },
+        { "title": "The Truman Show", "year": 1998, "type": "movie" }
+      ]
+    },
+    {
+      "name": "show_classics",
+      "displayName": "Classic Shows",
+      "description": "Series that earned their reputation",
+      "items": [
+        { "title": "Avatar: The Last Airbender", "year": 2005, "type": "show" },
+        { "title": "The Twilight Zone", "year": 1959, "type": "show" },
+        { "title": "Star Trek: The Next Generation", "year": 1987, "type": "show" },
+        { "title": "MythBusters", "year": 2003, "type": "show" },
+        { "title": "Malcolm in the Middle", "year": 2000, "type": "show" }
+      ]
+    }
+  ]
+}
