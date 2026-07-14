@@ -58,6 +58,37 @@ in `schema_migrations` — safe and idempotent against the existing database.
 
 ---
 
+## Running more than one instance
+
+The same codebase can run several fully independent instances on one host (e.g.
+a second family's copy). Each instance is a **separate git checkout** with its
+own `.env`, `family.config.json`, database, and pm2 process — they share only
+the code. Nothing about identity or data is baked into the repo, so `git pull`
+updates any instance without touching who it belongs to.
+
+What makes an instance distinct is entirely in its `.env`:
+
+| Var             | Purpose                                                                          |
+| --------------- | -------------------------------------------------------------------------------- |
+| `PORT`          | Its own port (each instance listens separately)                                  |
+| `DB_PATH`       | Its own database file, outside the repo                                          |
+| `WTWT_PM2_NAME` | The pm2 process name (`scripts/deploy.sh` reads this; defaults to `movie-night`) |
+| `APP_PASSWORD`  | **Required** if the instance is exposed publicly (see Security posture)          |
+| `ANTHROPIC_API_KEY` | Omit it to disable the Ask tab — `/api/config` reports `chatEnabled: false` and the client hides the tab automatically |
+
+Seed a fresh instance's lists/titles with the generic, idempotent seeder:
+
+```bash
+node scripts/seed-lists.js <seed-file.json>   # then: npm run enrich
+```
+
+Deploying a **shared code change** means bringing every instance's checkout up
+to date, not just the primary one — pull + restart each. A concrete, deployed
+example (ports, nginx, public exposure, monitoring) lives in the maintainer's
+`docs/MONTREAL-INSTANCE.md` runbook.
+
+---
+
 ## Security posture
 
 - **Default (LAN/Tailscale):** no authentication — access is controlled at the

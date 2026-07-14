@@ -76,6 +76,12 @@ The Pi cron job (installed in the Pi's crontab):
 ssh gordon@anguspi.local 'tail -5 ~/movie-night-data/backups/backup.log; ls -1t ~/movie-night-data/backups/ | head'
 ```
 
+> **Other instances back up independently.** A second instance (see
+> [DEPLOYMENT.md](DEPLOYMENT.md#running-more-than-one-instance)) has its own DB
+> and its own backup cron — `pi-db-backup.cjs` takes `WTWT_DATA_DIR` to point at
+> that instance's data dir. The `db:pull`/`db:push` sync commands above are wired
+> to the **primary** database only; don't run them against another instance.
+
 ### Restoring production from a backup
 
 ```bash

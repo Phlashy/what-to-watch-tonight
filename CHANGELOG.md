@@ -34,6 +34,15 @@ followed it — see `docs/AUDIT-OUTCOME.md` for the story and the result. Tiers
 - Optional shared-password authentication (`APP_PASSWORD`), off by default; the
   client shows a password gate when enabled.
 - Configurable CORS allowlist (`CORS_ORIGIN`).
+- **Multi-instance support**: the same codebase can run several fully
+  independent instances (separate `.env`, `family.config.json`, database, and
+  pm2 process). `WTWT_PM2_NAME` names the pm2 process (read by
+  `scripts/deploy.sh`); `WTWT_DATA_DIR` points the backup script at an
+  instance's data dir; `/api/config` reports `chatEnabled` so an instance with
+  no Anthropic key cleanly hides the Ask tab. New idempotent
+  `scripts/seed-lists.js` seeds an instance's lists/titles from JSON, and
+  `scripts/weekly-usage-report.cjs` sends an aggregate (counts-only) usage pulse
+  via ntfy. See [DEPLOYMENT.md](docs/DEPLOYMENT.md#running-more-than-one-instance).
 - Rate limiting on the chat endpoint (protects the Anthropic API).
 - Input validation: request size cap, a blanket oversized-string guard, and
   friendly per-field length limits.

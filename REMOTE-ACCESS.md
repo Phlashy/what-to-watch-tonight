@@ -34,4 +34,9 @@ iPhone: turn NordVPN off in its app, then open the Tailscale app and toggle it o
 - Pi name: anguspi.tail485122.ts.net (tailnet IP 100.107.76.32)
 - Private HTTPS set up with: tailscale serve --bg --https=8443 http://127.0.0.1:80
 - To remove it: tailscale serve --https=8443 off
-- The public Funnel on :443 belongs to a different project — leave it alone.
+- The public Funnel on :443 is shared by path: `/` is another project's app and
+  `/movie-night` is the **second WTWT instance** (a different family's copy — see
+  the MONTREAL-INSTANCE runbook). Gordon's own instance is the private `:8443`
+  above; don't confuse the two. Touch the `/movie-night` funnel mount only via
+  the instance runbook (`--set-path=/movie-night`), never `--https=443 off`
+  (that would also drop the other project).
