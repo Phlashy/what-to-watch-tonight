@@ -73,6 +73,8 @@ The app will be available at `http://localhost:3000` (dev) with the API on port 
 
 `npm run dev` automatically stops pm2 if it's running. `npm run deploy` always rebuilds the client before restarting pm2. No manual process management needed.
 
+**Multiple instances.** The same code can run several independent instances on one host — each a separate checkout with its own `.env`, `family.config.json`, database, and pm2 process (`WTWT_PM2_NAME`). An instance with no `ANTHROPIC_API_KEY` hides the Ask tab automatically. See [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md#running-more-than-one-instance).
+
 ## Database
 
 SQLite via better-sqlite3. The database file lives outside the repo (default: `~/movie-night-data/movies.db`). The schema is built and kept up to date by a migration runner on startup — no manual step. See [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md#4-database-schema).

@@ -21,6 +21,13 @@ repo.)
 | Nginx config | `/etc/nginx/sites-available/anguspi` (shared config, `location /movie-night/` block) |
 | GitHub       | https://github.com/Phlashy/what-to-watch-tonight                                     |
 
+> **This runbook covers the primary (Casey) instance.** A second, independent
+> instance runs on the same Pi for another family — different checkout, port,
+> database, and pm2 process, exposed publicly via Tailscale Funnel. Its own
+> runbook is **[MONTREAL-INSTANCE.md](./MONTREAL-INSTANCE.md)**. The generic
+> mechanism is in [DEPLOYMENT.md](./DEPLOYMENT.md#running-more-than-one-instance).
+> When you change **shared code**, deploy to *both* checkouts (see below).
+
 ---
 
 ## Config Files on Pi
@@ -68,6 +75,21 @@ ssh gordon@anguspi.local "cd ~/what-to-watch-tonight && git pull && pm2 restart 
 ```
 
 > **Why?** The Pi doesn't have the client's node_modules and we don't want it doing builds. The built `client/dist/` files are committed to git so `git pull` is all the Pi needs.
+
+### Shared-code changes → deploy to every instance
+
+The commands above update the primary checkout only. A change to shared code
+(anything but one instance's `.env`/`family.config.json`) must also reach the
+second instance, or the two will drift:
+
+```bash
+# after pushing, update the second instance too (deploy.sh reads its .env for
+# the pm2 name + port, so no per-instance flags needed):
+ssh gordon@anguspi.local "cd ~/movie-night-montreal && git pull && ./scripts/deploy.sh"
+```
+
+Verify both after: `pm2 list` shows `movie-night` **and** `movie-night-montreal`
+online. Full detail (ports, funnel, nginx) in [MONTREAL-INSTANCE.md](./MONTREAL-INSTANCE.md).
 
 ### Database sync & backups
 
