@@ -46,6 +46,10 @@ wtwt/
 wtwt icon.png
 *.docx
 
+# Private instance runbook — names a real family + home-server topology, kept
+# out of the public repo (working copy stays locally at docs/MONTREAL-INSTANCE.md)
+docs/MONTREAL-INSTANCE.md
+
 # Local-only process docs (symlinks into private Dropbox docs, prompt scaffolding)
 ANGUSPI_OPERATIONS.md
 PI_FRESH_SETUP_GUIDE.md

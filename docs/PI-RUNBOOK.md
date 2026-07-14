@@ -24,8 +24,9 @@ repo.)
 > **This runbook covers the primary (Casey) instance.** A second, independent
 > instance runs on the same Pi for another family — different checkout, port,
 > database, and pm2 process, exposed publicly via Tailscale Funnel. Its own
-> runbook is **[MONTREAL-INSTANCE.md](./MONTREAL-INSTANCE.md)**. The generic
-> mechanism is in [DEPLOYMENT.md](./DEPLOYMENT.md#running-more-than-one-instance).
+> runbook is **`docs/MONTREAL-INSTANCE.md`** (kept private — maintainer's local
+> copy, not committed). The generic mechanism is in
+> [DEPLOYMENT.md](./DEPLOYMENT.md#running-more-than-one-instance).
 > When you change **shared code**, deploy to *both* checkouts (see below).
 
 ---
@@ -89,7 +90,7 @@ ssh gordon@anguspi.local "cd ~/movie-night-montreal && git pull && ./scripts/dep
 ```
 
 Verify both after: `pm2 list` shows `movie-night` **and** `movie-night-montreal`
-online. Full detail (ports, funnel, nginx) in [MONTREAL-INSTANCE.md](./MONTREAL-INSTANCE.md).
+online. Full detail (ports, funnel, nginx) in the private `docs/MONTREAL-INSTANCE.md`.
 
 ### Database sync & backups
 
