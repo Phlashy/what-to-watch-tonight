@@ -1,42 +1,74 @@
 # WTWT — Remote Access (Tailscale)
 
-Quick links and commands for using and deploying the Movie Night app from anywhere.
+How to reach and deploy the Movie Night app from anywhere.
 
 ## Links
 
 - App (home Wi-Fi): http://anguspi.local/movie-night/
-- App (anywhere, HTTPS): https://anguspi.tail485122.ts.net:8443/movie-night/
+- **App (anywhere, public): https://anguspi.tail485122.ts.net:8443/movie-night/**
+  — password-protected (shared `APP_PASSWORD`). **No Tailscale needed on the
+  device.** Enter the password once per device and it's remembered.
 
-## Deploy from anywhere
+## Using the app (family)
+
+Just open the public URL above in any browser and enter the shared password.
+On a phone, "Add to Home Screen" makes it feel like a native app. Tailscale/VPN
+state on the phone no longer matters — the app is served over the public
+internet (via Tailscale **Funnel** on port 8443), gated by the password.
+
+> Flipped from private to public on 2026-08-03 (was tailnet-only `serve`).
+> Before, every device needed Tailscale connected; now none do.
+
+## Deploy from anywhere (Gordon only)
+
+Deploys still go over SSH on the tailnet, so **the Mac** still needs Tailscale:
 
     ssh gordon@anguspi.tail485122.ts.net "cd ~/what-to-watch-tonight && git pull && pm2 restart movie-night"
 
 (At home you can still use anguspi.local instead of the Tailscale name.)
 
-## Requirements
+- The Mac must be signed into Tailscale (account: Phlashy@).
+- NordVPN must be OFF / paused while deploying — two VPNs can't both own the
+  connection, and NordVPN on macOS has no split-tunnel. Nord is fine for
+  streaming, just not at the same time as Tailscale. (This only affects
+  *deploying*; the family using the app is unaffected by any VPN.)
 
-- The device must be signed into Tailscale (account: Phlashy@). On a phone, install the Tailscale app.
-- NordVPN must be OFF / paused while you use Tailscale — two VPNs can't both own the connection, and NordVPN on macOS has no split-tunnel to carve out an exception. Nord stays fine for streaming/geo-unblocking, just not at the same time as Tailscale.
+## How the public exposure is wired
 
-## Pause-on-demand routine (when NordVPN is on)
+Port 443's Funnel was already taken (`/` = Legs & Sleep Log, `/movie-night` =
+the **Montreal** WTWT instance — a different family's copy, see
+`docs/MONTREAL-INSTANCE.md`). So this instance keeps its own port, **8443**,
+flipped from private `serve` to public `funnel`:
 
-Mac:
+    public :8443  →  nginx 127.0.0.1:8093 (movie-night only)  →  app :3001
 
-1. Click the NordVPN icon in the menu bar (top-right).
-2. Choose Pause (pick a duration — it auto-resumes after) or Disconnect.
-3. Use Tailscale / the app, then resume Nord when done.
+- **Isolated nginx block** (`/etc/nginx/sites-available/anguspi`, marker
+  `# --- Gordon public funnel block`): `listen 127.0.0.1:8093;` with
+  `location /movie-night/ → proxy_pass http://127.0.0.1:3001/;` (trailing slash
+  strips the prefix). Isolated on purpose — going public exposes ONLY
+  `/movie-night/`, not the rest of nginx.
+- **Funnel command that made it public:**
+  `sudo tailscale funnel --bg --https=8443 http://127.0.0.1:8093`
+- **Password gate is mandatory** while public: `APP_PASSWORD` in
+  `~/what-to-watch-tonight/.env`. The server rejects every `/api` request
+  without it (401); the client shows a one-time password screen. The static
+  app shell is public, but all data behind it is gated.
+- **Monitoring:** `~/scripts/health-check.sh` (cron, every 5 min) probes
+  `http://127.0.0.1:8093/movie-night/health` and checks the `:8443` funnel
+  mount still exists → alerts to ntfy if the public route drops.
 
-iPhone: turn NordVPN off in its app, then open the Tailscale app and toggle it on.
+### To revert to private (tailnet-only)
+
+    sudo tailscale funnel --https=8443 off
+    sudo tailscale serve --bg --https=8443 http://127.0.0.1:80
+
+(Optional: remove `APP_PASSWORD` from `.env` + `pm2 restart movie-night` to drop
+the gate once it's private again.)
 
 ## Pi reference
 
 - Tailnet: tail485122.ts.net
 - Pi name: anguspi.tail485122.ts.net (tailnet IP 100.107.76.32)
-- Private HTTPS set up with: tailscale serve --bg --https=8443 http://127.0.0.1:80
-- To remove it: tailscale serve --https=8443 off
-- The public Funnel on :443 is shared by path: `/` is another project's app and
-  `/movie-night` is the **second WTWT instance** (a different family's copy — see
-  the MONTREAL-INSTANCE runbook). Gordon's own instance is the private `:8443`
-  above; don't confuse the two. Touch the `/movie-night` funnel mount only via
-  the instance runbook (`--set-path=/movie-night`), never `--https=443 off`
-  (that would also drop the other project).
+- **Don't** run `tailscale funnel --https=443 off` — 443 is shared by the Legs &
+  Sleep Log and the Montreal instance; touch the Montreal mount only via its
+  runbook (`--set-path=/movie-night`). This instance lives on `:8443`, separate.

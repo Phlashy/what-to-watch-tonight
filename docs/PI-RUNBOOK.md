@@ -13,7 +13,7 @@ repo.)
 | Detail       | Value                                                                                |
 | ------------ | ------------------------------------------------------------------------------------ |
 | URL (home)   | `http://anguspi.local/movie-night/`                                                  |
-| URL (remote) | `https://anguspi.tail485122.ts.net:8443/movie-night/` (Tailscale, private)           |
+| URL (remote) | `https://anguspi.tail485122.ts.net:8443/movie-night/` (**public** via Funnel, `APP_PASSWORD`-gated — see [REMOTE-ACCESS.md](../REMOTE-ACCESS.md)) |
 | Port         | 3001                                                                                 |
 | Pi directory | `~/what-to-watch-tonight/`                                                           |
 | Database     | `~/movie-night-data/movies.db`                                                       |
