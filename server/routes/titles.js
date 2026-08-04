@@ -86,6 +86,14 @@ router.get('/:id', (req, res) => {
 });
 
 // POST /api/titles
+//
+// Find-or-create, not blind-create. A `tmdb_id` uniquely identifies a film or
+// show, so if we already hold it we hand back the existing row (flagged
+// `existing: true`) instead of minting a second one. Adding a title the library
+// already has is the normal case — you search TMDB, pick the film, and only then
+// does anyone discover it was already there — and treating it as a fresh insert
+// is what produced 24 duplicate pairs in production. Migration 006 backs this
+// with a UNIQUE index so a race between two devices can't slip past either.
 router.post('/', (req, res) => {
   const db = req.app.locals.db;
   const {
@@ -103,26 +111,43 @@ router.post('/', (req, res) => {
   if (!title) return res.status(400).json({ error: 'title required' });
   checkLength(title, LIMITS.title, 'Title');
 
-  const result = db
-    .prepare(
-      `
+  const findByTmdbId = () => db.prepare('SELECT * FROM titles WHERE tmdb_id = ?').get(tmdb_id);
+
+  if (tmdb_id) {
+    const existing = findByTmdbId();
+    if (existing) return res.json({ ...existing, existing: true });
+  }
+
+  let result;
+  try {
+    result = db
+      .prepare(
+        `
     INSERT INTO titles (title, title_raw, type, tmdb_id, year, director, cast, genre, runtime_minutes, poster_url, synopsis)
     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
   `
-    )
-    .run(
-      title,
-      title,
-      type,
-      tmdb_id || null,
-      year || null,
-      director || null,
-      cast ? JSON.stringify(cast) : null,
-      genre ? JSON.stringify(genre) : null,
-      runtime_minutes || null,
-      poster_url || null,
-      synopsis || null
-    );
+      )
+      .run(
+        title,
+        title,
+        type,
+        tmdb_id || null,
+        year || null,
+        director || null,
+        cast ? JSON.stringify(cast) : null,
+        genre ? JSON.stringify(genre) : null,
+        runtime_minutes || null,
+        poster_url || null,
+        synopsis || null
+      );
+  } catch (e) {
+    // Lost a race to another request between the SELECT above and this INSERT —
+    // the row now exists, which is exactly what the caller wanted.
+    if (tmdb_id && /UNIQUE constraint failed: titles\.tmdb_id/.test(e.message)) {
+      return res.json({ ...findByTmdbId(), existing: true });
+    }
+    throw e;
+  }
 
   res.json(db.prepare('SELECT * FROM titles WHERE id = ?').get(result.lastInsertRowid));
 });

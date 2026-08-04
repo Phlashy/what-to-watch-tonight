@@ -3,6 +3,7 @@ import { api } from '../api';
 import { usePerson } from '../context/PersonContext';
 import { useFamily } from '../context/FamilyContext';
 import { useOnEscape } from '../lib/a11y';
+import { findOrCreateTitleFromTmdb } from '../lib/tmdb';
 // family_movie_night is intentionally NOT here — it has its own prominent toggle
 // near the top of the form (it drives the choosing rotation, so it shouldn't be
 // buried among incidental tags).
@@ -118,26 +119,13 @@ export default function LogViewing({
   async function selectTmdbResult(tmdbItem) {
     setCreatingTitle(true);
     try {
-      // Create the title in the DB
-      const titleRes = await api('/api/titles', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          title: tmdbItem.title || tmdbItem.name,
-          type: tmdbItem.media_type === 'tv' ? 'show' : 'movie',
-        }),
-      });
-      const titleData = await titleRes.json();
-
-      // Enrich with TMDB metadata
-      await api(`/api/tmdb/enrich/${titleData.id}`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ tmdb_id: tmdbItem.id }),
-      });
+      // Reuses the library's existing row if we already have this title —
+      // picking the TMDB result instead of the local one above shouldn't
+      // silently fork the film into two records.
+      const titleData = await findOrCreateTitleFromTmdb(tmdbItem);
 
       setSelectedTitleId(titleData.id);
-      setSelectedTitleName(tmdbItem.title || tmdbItem.name);
+      setSelectedTitleName(titleData.title || tmdbItem.title || tmdbItem.name);
       setSearchResults([]);
       setTmdbResults([]);
     } finally {

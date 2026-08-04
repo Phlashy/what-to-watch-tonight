@@ -124,6 +124,18 @@ followed it — see `docs/AUDIT-OUTCOME.md` for the story and the result. Tiers
 
 ### Fixed
 
+- **Duplicate titles (two rows for the same film)** — every "add a title" path
+  did an unconditional `INSERT`, so adding a film the library already had created
+  a second row rather than reusing the first. Production had accumulated 24 such
+  pairs (Weapons even sat on "Cinema flicks I missed" twice, once under each id).
+  Three changes: `POST /api/titles` is now find-or-create on `tmdb_id`; Quick Add
+  searches your own library alongside TMDB and hides TMDB results you already
+  hold (previously it searched TMDB only, so it could never notice); and
+  migration 006 merges the existing pairs — folding every viewing, list
+  membership, star, disc and show-status onto the surviving row — then adds a
+  UNIQUE index on `tmdb_id` so it can't recur. `npm run dedup -- --dry-run`
+  previews a merge. Re-matching a title to a TMDB entry another title already
+  claims now returns a clear 409 instead of a constraint error.
 - **"Add to list" close (✕) unreachable on iPhone** — the bottom sheets that lack
   their own height cap (Add-to-list, Edit list, New list) had no `max-height`, so
   with many lists the sheet grew taller than the screen and, because it's anchored
