@@ -117,6 +117,21 @@ router.post('/enrich/:titleId', async (req, res, next) => {
     const synopsis = details.overview || null;
     const year = (details.release_date || details.first_air_date || '').split('-')[0] || null;
 
+    // Since migration 006 a tmdb_id belongs to exactly one title, so pointing
+    // this one at a match another title already holds would be a constraint
+    // error. Say so plainly instead — "fix the match" is usually the moment you
+    // discover the library has the film twice, and the fix is to merge, not to
+    // create a second claim on the same TMDB entry.
+    const claimedBy = db
+      .prepare('SELECT id, title FROM titles WHERE tmdb_id = ? AND id != ?')
+      .get(searchId, req.params.titleId);
+    if (claimedBy) {
+      return res.status(409).json({
+        error: `"${claimedBy.title}" is already matched to this TMDB entry.`,
+        conflictTitleId: claimedBy.id,
+      });
+    }
+
     const correctType = tmdb_type === 'tv' ? 'show' : 'movie';
     db.prepare(
       `

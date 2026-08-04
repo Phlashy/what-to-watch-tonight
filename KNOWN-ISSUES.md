@@ -1,8 +1,28 @@
 # Known Issues
 
-Last updated: 2026-06-29
+Last updated: 2026-08-04
 
 ## Resolved
+
+### Duplicate titles — the same film twice in the library (2026-08-04)
+
+- **What you saw** — Weapons, Bugonia and 22 other films appeared twice, and
+  Weapons was on "Cinema flicks I missed" twice over.
+- **Cause** — every "add a title" path (`Quick Add`, the Log-a-viewing search,
+  the Search tab) did an unconditional `INSERT INTO titles`. Nothing checked
+  whether we already held the film, and nothing in the schema stopped it: there
+  was no UNIQUE constraint on `tmdb_id`. Quick Add was the worst offender because
+  it searched **TMDB only** — it had no way to know the library already had it.
+- **Fix** — `POST /api/titles` is now find-or-create on `tmdb_id`; Quick Add
+  searches the library too and hides TMDB results already held; migration 006
+  merges the existing pairs and adds a partial UNIQUE index on `tmdb_id`.
+- **One case was not a duplicate** — "Mission Impossible I" (the 1996 film) had
+  been mis-matched to _Mission: Impossible – The Final Reckoning_'s TMDB entry,
+  so the two shared an id despite being different films. It was re-matched to the
+  1996 entry (TMDB 954) before the merge ran, and both films are still in the
+  library. If a shared `tmdb_id` ever shows up again, check for this before
+  merging — `npm run dedup -- --dry-run` lists each row's viewings and lists so
+  you can tell a true duplicate from a bad match.
 
 ### iOS bottom-sheet close button unreachable (2026-06-29)
 

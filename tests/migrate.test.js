@@ -23,9 +23,11 @@ describe('migration runner', () => {
       '003_index_viewing_people_person',
       '004_lists_icon',
       '005_ratings',
+      '006_unique_tmdb_id',
     ]);
     assert.ok(hasColumn(db, 'lists', 'icon'));
     assert.ok(hasColumn(db, 'titles', 'rt_score'));
+    assert.ok(hasIndex(db, 'idx_titles_tmdb_id_unique'));
     assert.ok(hasTable(db, 'titles'));
     assert.ok(hasTable(db, 'collection'));
     assert.ok(hasTable(db, 'show_status'));
@@ -44,6 +46,8 @@ describe('migration runner', () => {
   it('rollbackLast reverses migrations newest-first, and migrate re-applies them', () => {
     const db = new Database(':memory:');
     migrate(db);
+    assert.equal(rollbackLast(db), '006_unique_tmdb_id');
+    assert.ok(!hasIndex(db, 'idx_titles_tmdb_id_unique'), 'unique tmdb_id index dropped');
     assert.equal(rollbackLast(db), '005_ratings');
     assert.ok(!hasColumn(db, 'titles', 'rt_score'), 'titles.rt_score dropped');
     assert.equal(rollbackLast(db), '004_lists_icon');
@@ -55,12 +59,19 @@ describe('migration runner', () => {
     assert.ok(!hasColumn(db, 'viewings', 'picked_by'), 'picked_by dropped');
     assert.deepEqual(
       migrate(db),
-      ['002_incremental', '003_index_viewing_people_person', '004_lists_icon', '005_ratings'],
+      [
+        '002_incremental',
+        '003_index_viewing_people_person',
+        '004_lists_icon',
+        '005_ratings',
+        '006_unique_tmdb_id',
+      ],
       're-applies'
     );
     assert.ok(hasTable(db, 'collection'));
     assert.ok(hasColumn(db, 'viewings', 'picked_by'));
     assert.ok(hasIndex(db, 'idx_viewing_people_person'));
+    assert.ok(hasIndex(db, 'idx_titles_tmdb_id_unique'));
     db.close();
   });
 });
