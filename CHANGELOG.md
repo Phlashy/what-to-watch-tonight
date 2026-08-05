@@ -122,6 +122,17 @@ followed it — see `docs/AUDIT-OUTCOME.md` for the story and the result. Tiers
   and deleting a viewing or a list. A failure mid-write rolls everything back
   instead of leaving half-written data (covered by rollback tests).
 
+### Added
+
+- **Age certificate on titles** (G / PG / PG-13 / R for films, TV-14 / TV-MA for
+  shows) — shown as a small outlined badge beside the year and runtime on the
+  title page, list cards and the Tonight picks. US ratings, taken from the `Rated`
+  field OMDb already returns alongside the Rotten Tomatoes / IMDb / Metacritic
+  scores, so it costs no extra API calls. Titles OMDb has no certificate for (or
+  that it marks "Not Rated" / "Approved") simply show no badge. New titles pick it
+  up automatically; existing ones were back-filled with
+  `npm run enrich:ratings -- --certs-only`.
+
 ### Fixed
 
 - **Duplicate titles (two rows for the same film)** — every "add a title" path

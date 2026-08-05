@@ -8,6 +8,7 @@ import ViewingItem from '../components/ViewingItem';
 import EditableTitle from '../components/EditableTitle';
 import AddToListSheet from '../components/AddToListSheet';
 import AddToCollectionForm from '../components/AddToCollectionForm';
+import CertificateBadge from '../components/CertificateBadge';
 import { usePerson } from '../context/PersonContext';
 import { useFamily } from '../context/FamilyContext';
 import { useConfirm } from '../components/ConfirmDialog';
@@ -307,6 +308,7 @@ export default function TitleDetail() {
                     <span>{title.runtime_minutes}m</span>
                   </>
                 )}
+                <CertificateBadge rating={title.content_rating} />
                 {title.rt_score != null && (
                   <span
                     className="flex items-center gap-1 text-red-400 font-medium"

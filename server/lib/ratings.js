@@ -34,8 +34,31 @@ async function getImdbIdFromTmdb(tmdbId, type, apiKey) {
 }
 
 /**
- * OMDb lookup by IMDb id → { rt, imdb, metacritic, omdbTitle, omdbYear }.
- * Any score may be null if OMDb lacks it; returns null entirely if OMDb has no
+ * OMDb's `Rated` field carries several flavours of "we don't know": the literal
+ * string "N/A", plus distributor-era labels that tell a viewer nothing about age
+ * suitability. Treat all of them as absent so the UI shows no badge rather than a
+ * meaningless one.
+ */
+const UNKNOWN_CERTIFICATES = new Set([
+  'N/A',
+  'NOT RATED',
+  'UNRATED',
+  'NR',
+  'APPROVED',
+  'PASSED',
+  '',
+]);
+
+/** OMDb `Rated` → a certificate worth showing, or null. */
+function parseContentRating(rated) {
+  if (!rated) return null;
+  const value = String(rated).trim();
+  return UNKNOWN_CERTIFICATES.has(value.toUpperCase()) ? null : value;
+}
+
+/**
+ * OMDb lookup by IMDb id → { rt, imdb, metacritic, contentRating, omdbTitle, omdbYear }.
+ * Any field may be null if OMDb lacks it; returns null entirely if OMDb has no
  * record for the id at all (e.g. "Incorrect IMDb ID").
  */
 async function fetchOmdbRatings(imdbId, apiKey) {
@@ -55,9 +78,11 @@ async function fetchOmdbRatings(imdbId, apiKey) {
     rt: Number.isNaN(rt) ? null : rt,
     imdb: Number.isNaN(imdb) ? null : imdb,
     metacritic: Number.isNaN(metacritic) ? null : metacritic,
+    // US certificate — "PG", "PG-13", "R" for films; "TV-14", "TV-MA" for shows.
+    contentRating: parseContentRating(data.Rated),
     omdbTitle: data.Title || null,
     omdbYear: data.Year || null,
   };
 }
 
-module.exports = { parseImdbId, getImdbIdFromTmdb, fetchOmdbRatings };
+module.exports = { parseImdbId, getImdbIdFromTmdb, fetchOmdbRatings, parseContentRating };

@@ -24,9 +24,11 @@ describe('migration runner', () => {
       '004_lists_icon',
       '005_ratings',
       '006_unique_tmdb_id',
+      '007_content_rating',
     ]);
     assert.ok(hasColumn(db, 'lists', 'icon'));
     assert.ok(hasColumn(db, 'titles', 'rt_score'));
+    assert.ok(hasColumn(db, 'titles', 'content_rating'));
     assert.ok(hasIndex(db, 'idx_titles_tmdb_id_unique'));
     assert.ok(hasTable(db, 'titles'));
     assert.ok(hasTable(db, 'collection'));
@@ -46,6 +48,8 @@ describe('migration runner', () => {
   it('rollbackLast reverses migrations newest-first, and migrate re-applies them', () => {
     const db = new Database(':memory:');
     migrate(db);
+    assert.equal(rollbackLast(db), '007_content_rating');
+    assert.ok(!hasColumn(db, 'titles', 'content_rating'), 'titles.content_rating dropped');
     assert.equal(rollbackLast(db), '006_unique_tmdb_id');
     assert.ok(!hasIndex(db, 'idx_titles_tmdb_id_unique'), 'unique tmdb_id index dropped');
     assert.equal(rollbackLast(db), '005_ratings');
@@ -65,6 +69,7 @@ describe('migration runner', () => {
         '004_lists_icon',
         '005_ratings',
         '006_unique_tmdb_id',
+        '007_content_rating',
       ],
       're-applies'
     );

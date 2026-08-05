@@ -5,6 +5,7 @@ import { useFamily } from '../context/FamilyContext';
 import { parseJSON } from '../utils';
 import { useFromState } from '../lib/useFromState';
 import ShortlistButton from './ShortlistButton';
+import CertificateBadge from './CertificateBadge';
 
 /**
  * A single title card on the Tonight page: poster + metadata, an overlaid
@@ -87,6 +88,7 @@ export default function WatchCard({
                 <span>{item.runtime_minutes}m</span>
               </>
             )}
+            <CertificateBadge rating={item.content_rating} />
             {item.director && (
               <>
                 <span>·</span>
