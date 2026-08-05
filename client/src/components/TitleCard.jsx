@@ -1,6 +1,7 @@
 import { Link } from 'react-router-dom';
 import { parseJSON } from '../utils';
 import { useFromState } from '../lib/useFromState';
+import CertificateBadge from './CertificateBadge';
 
 function StarRating({ rating }) {
   if (!rating) return null;
@@ -63,6 +64,7 @@ export default function TitleCard({ item, showStreaming = true, showWatched = tr
               {item.year && <span>{item.year}</span>}
               {item.runtime_minutes && <span>·</span>}
               {item.runtime_minutes && <span>{item.runtime_minutes}m</span>}
+              <CertificateBadge rating={item.content_rating} />
               {item.director && <span>·</span>}
               {item.director && <span className="truncate">{item.director}</span>}
             </div>

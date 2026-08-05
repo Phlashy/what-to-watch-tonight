@@ -19,7 +19,7 @@ const updateRatings = (db) =>
   db.prepare(`
     UPDATE titles SET
       imdb_id = ?, rt_score = ?, imdb_rating = ?, metacritic_score = ?,
-      ratings_updated_at = CURRENT_TIMESTAMP
+      content_rating = ?, ratings_updated_at = CURRENT_TIMESTAMP
     WHERE id = ?
   `);
 
@@ -63,7 +63,14 @@ router.post('/refresh/:titleId', async (req, res, next) => {
         .json({ error: `OMDb has no entry for ${imdbId}. Double-check the IMDb ID.` });
     }
 
-    updateRatings(db).run(imdbId, ratings.rt, ratings.imdb, ratings.metacritic, title.id);
+    updateRatings(db).run(
+      imdbId,
+      ratings.rt,
+      ratings.imdb,
+      ratings.metacritic,
+      ratings.contentRating,
+      title.id
+    );
 
     res.json({
       title: db.prepare('SELECT * FROM titles WHERE id = ?').get(title.id),

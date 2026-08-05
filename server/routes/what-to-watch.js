@@ -27,7 +27,7 @@ router.get('/:context', (req, res) => {
   let query = `
     SELECT
       t.id, t.title, t.year, t.director, t.genre, t.runtime_minutes,
-      t.poster_url, t.synopsis, t.type, t.cast, t.watch_providers,
+      t.poster_url, t.synopsis, t.type, t.cast, t.watch_providers, t.content_rating,
       li.id as list_item_id, li.streaming_service, li.source, li.note, li.added_at, li.added_by,
       l.name as list_name, l.display_name as list_display_name,
       (SELECT MAX(v.date) FROM viewings v WHERE v.title_id = t.id) as last_watched,

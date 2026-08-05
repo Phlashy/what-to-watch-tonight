@@ -81,7 +81,7 @@ router.get('/:name/items', (req, res) => {
     .prepare(
       `
     SELECT li.*, t.title, t.year, t.director, t.genre, t.runtime_minutes,
-      t.poster_url, t.synopsis, t.type, t.cast, t.tmdb_id,
+      t.poster_url, t.synopsis, t.type, t.cast, t.tmdb_id, t.content_rating,
       (SELECT MAX(v.date) FROM viewings v WHERE v.title_id = t.id) as last_watched,
       (SELECT COUNT(*) FROM viewings v WHERE v.title_id = t.id) as view_count,
       (SELECT ROUND(AVG(r), 1) FROM (

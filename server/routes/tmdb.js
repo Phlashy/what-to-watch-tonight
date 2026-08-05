@@ -168,7 +168,7 @@ router.post('/enrich/:titleId', async (req, res, next) => {
     }
     db.prepare(
       `UPDATE titles SET imdb_id = ?, rt_score = NULL, imdb_rating = NULL,
-         metacritic_score = NULL, ratings_updated_at = NULL WHERE id = ?`
+         metacritic_score = NULL, content_rating = NULL, ratings_updated_at = NULL WHERE id = ?`
     ).run(imdbId, req.params.titleId);
 
     // Best-effort immediate refresh; on any failure the row stays queued (NULL)
@@ -180,8 +180,14 @@ router.post('/enrich/:titleId', async (req, res, next) => {
         if (ratings) {
           db.prepare(
             `UPDATE titles SET rt_score = ?, imdb_rating = ?, metacritic_score = ?,
-               ratings_updated_at = CURRENT_TIMESTAMP WHERE id = ?`
-          ).run(ratings.rt, ratings.imdb, ratings.metacritic, req.params.titleId);
+               content_rating = ?, ratings_updated_at = CURRENT_TIMESTAMP WHERE id = ?`
+          ).run(
+            ratings.rt,
+            ratings.imdb,
+            ratings.metacritic,
+            ratings.contentRating,
+            req.params.titleId
+          );
         } else {
           db.prepare('UPDATE titles SET ratings_updated_at = CURRENT_TIMESTAMP WHERE id = ?').run(
             req.params.titleId

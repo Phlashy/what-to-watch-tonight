@@ -2,8 +2,9 @@
 /**
  * Ratings Enrichment Script
  *
- * Fetches Rotten Tomatoes (Tomatometer), IMDb, and Metacritic scores for every
- * title that has a TMDB id but no ratings yet, and stores them on the title.
+ * Fetches Rotten Tomatoes (Tomatometer), IMDb, and Metacritic scores plus the US
+ * age certificate (PG, PG-13, R; TV-14, TV-MA for shows) for every title that has
+ * a TMDB id but no ratings yet, and stores them on the title.
  *
  * Rotten Tomatoes has no public API, so we go via OMDb (omdbapi.com), which
  * returns all three scores in one call keyed by IMDb id. We get the IMDb id from
@@ -13,6 +14,7 @@
  * and the existing TMDB_API_KEY in .env.
  *
  * Run: npm run enrich:ratings
+ *      npm run enrich:ratings -- --certs-only   (back-fill certificates only)
  */
 require('dotenv').config({ path: require('path').join(__dirname, '../.env'), override: true });
 
@@ -51,7 +53,7 @@ function sleep(ms) {
 const updateRatings = db.prepare(`
   UPDATE titles SET
     imdb_id = ?, rt_score = ?, imdb_rating = ?, metacritic_score = ?,
-    ratings_updated_at = CURRENT_TIMESTAMP
+    content_rating = ?, ratings_updated_at = CURRENT_TIMESTAMP
   WHERE id = ?
 `);
 
@@ -68,8 +70,16 @@ async function enrichTitle(row) {
     return false;
   }
 
-  updateRatings.run(imdbId, ratings.rt, ratings.imdb, ratings.metacritic, row.id);
+  updateRatings.run(
+    imdbId,
+    ratings.rt,
+    ratings.imdb,
+    ratings.metacritic,
+    ratings.contentRating,
+    row.id
+  );
   const parts = [
+    ratings.contentRating,
     ratings.rt != null ? `🍅${ratings.rt}%` : null,
     ratings.imdb != null ? `IMDb ${ratings.imdb}` : null,
     ratings.metacritic != null ? `MC ${ratings.metacritic}` : null,
@@ -79,14 +89,33 @@ async function enrichTitle(row) {
 }
 
 async function main() {
-  // Titles enriched by TMDB (so we can resolve an IMDb id) that we haven't
-  // fetched ratings for yet. Re-runs are idempotent: ratings_updated_at gates them.
-  const titles = db
-    .prepare(
-      'SELECT * FROM titles WHERE tmdb_id IS NOT NULL AND ratings_updated_at IS NULL ORDER BY title ASC'
-    )
-    .all();
-  console.log(`\nFetching ratings for ${titles.length} titles via OMDb...\n`);
+  // Default: titles enriched by TMDB (so we can resolve an IMDb id) that we
+  // haven't fetched ratings for yet. Re-runs are idempotent — ratings_updated_at
+  // gates them.
+  //
+  // --certs-only: the one-off back-fill for the age certificate, added after the
+  // scores were already populated. Those rows have a ratings_updated_at, so the
+  // default query skips them forever; this targets exactly the rows that have an
+  // IMDb id but no certificate yet. Still safe to re-run — rows OMDb has no
+  // certificate for simply stay null and get picked up again, so prefer running
+  // it once and accepting the misses over fighting the daily quota.
+  const certsOnly = process.argv.includes('--certs-only');
+
+  const titles = certsOnly
+    ? db
+        .prepare(
+          'SELECT * FROM titles WHERE imdb_id IS NOT NULL AND content_rating IS NULL ORDER BY title ASC'
+        )
+        .all()
+    : db
+        .prepare(
+          'SELECT * FROM titles WHERE tmdb_id IS NOT NULL AND ratings_updated_at IS NULL ORDER BY title ASC'
+        )
+        .all();
+
+  console.log(
+    `\nFetching ${certsOnly ? 'age certificates' : 'ratings'} for ${titles.length} titles via OMDb...\n`
+  );
 
   let success = 0,
     fail = 0;
