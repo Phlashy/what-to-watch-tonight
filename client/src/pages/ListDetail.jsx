@@ -26,15 +26,33 @@ import { CSS } from '@dnd-kit/utilities';
 
 const SORT_OPTIONS = [
   { value: 'manual', label: 'Manual order' },
+  { value: 'unwatched', label: 'Unwatched first' },
   { value: 'title', label: 'Title A–Z' },
   { value: 'year', label: 'Year (newest)' },
   { value: 'rating', label: 'Rating (highest)' },
   { value: 'recent', label: 'Recently added' },
 ];
 
+/**
+ * "Unwatched first": everything you haven't seen rises to the top, then the
+ * watched ones in the order you saw them — longest ago first, most recent at the
+ * very bottom. So the list reads as "pick from up here" and the stuff you just
+ * watched gets out of the way.
+ *
+ * Array.prototype.sort is stable, so the unwatched block keeps the list's own
+ * curated order rather than being shuffled into something arbitrary.
+ */
+function byUnwatchedFirst(a, b) {
+  if (!a.last_watched && !b.last_watched) return 0;
+  if (!a.last_watched) return -1;
+  if (!b.last_watched) return 1;
+  return a.last_watched.localeCompare(b.last_watched);
+}
+
 // Sort a copy for the non-manual views (manual returns the array untouched).
 function sortItems(items, sort) {
   const copy = [...items];
+  if (sort === 'unwatched') return copy.sort(byUnwatchedFirst);
   if (sort === 'title') return copy.sort((a, b) => a.title.localeCompare(b.title));
   if (sort === 'year') return copy.sort((a, b) => (b.year || 0) - (a.year || 0));
   if (sort === 'rating') return copy.sort((a, b) => (b.avg_rating || 0) - (a.avg_rating || 0));

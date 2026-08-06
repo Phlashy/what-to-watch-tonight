@@ -124,6 +124,11 @@ followed it — see `docs/AUDIT-OUTCOME.md` for the story and the result. Tiers
 
 ### Added
 
+- **"Unwatched first" sort on a list** — everything you haven't seen rises to the
+  top, then the watched ones in the order you saw them, most recently watched at
+  the very bottom. The unwatched block keeps the list's own curated order rather
+  than being reshuffled. Sits alongside the existing Manual / Title / Year /
+  Rating / Recently added options and is remembered per list.
 - **Age certificate on titles** (G / PG / PG-13 / R for films, TV-14 / TV-MA for
   shows) — shown as a small outlined badge beside the year and runtime on the
   title page, list cards and the Tonight picks. US ratings, taken from the `Rated`
