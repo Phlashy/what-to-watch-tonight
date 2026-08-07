@@ -124,6 +124,20 @@ followed it — see `docs/AUDIT-OUTCOME.md` for the story and the result. Tiers
 
 ### Added
 
+- **Merge two titles into one** — when you re-match a title to a TMDB entry
+  another title already claims, the "Fix TMDB match" sheet now offers **"Merge
+  them"** instead of just refusing. Everything moves onto the title you keep:
+  viewings (with who watched), list memberships, stars, discs and show status;
+  same-day double-logs collapse into one. Backed by
+  `POST /api/titles/:id/merge-into/:targetId`, reusing the merge logic migration
+  006 uses. You choose which title survives — the automatic sweep keeps whichever
+  has the most history, which is exactly wrong here, because the row carrying the
+  viewings is usually the mistaken one.
+- **Delete a title** — for entries that shouldn't exist at all (a mis-scanned DVD,
+  a wrong match logged by mistake). The confirmation names what goes with it
+  ("this also removes 3 viewings, 1 list"), since watch history can't be recovered.
+  `DELETE /api/titles/:id`, plus `GET /api/titles/:id/footprint` so the
+  confirmation can state the cost before you commit.
 - **"Unwatched first" sort on a list** — everything you haven't seen rises to the
   top, then the watched ones in the order you saw them, most recently watched at
   the very bottom. The unwatched block keeps the list's own curated order rather

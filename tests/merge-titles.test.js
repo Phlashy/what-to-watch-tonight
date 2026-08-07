@@ -214,4 +214,160 @@ describe('Duplicate titles', () => {
       assert.notEqual(a.body.id, b.body.id);
     });
   });
+
+  // Merging by hand — the way out of a wrong TMDB match that can't be re-pointed
+  // because the right film is already in the library (the 409 from the enrich
+  // route). The real case: a Hercules row carrying two viewings turned out to be
+  // the wrong Hercules, and the animated one was already there.
+  describe('POST /api/titles/:id/merge-into/:targetId', () => {
+    it('moves history onto the target and deletes the source', async () => {
+      const wrong = db
+        .prepare("INSERT INTO titles (title, year, tmdb_id) VALUES ('Hercules', 2014, 184315)")
+        .run().lastInsertRowid;
+      const right = db
+        .prepare("INSERT INTO titles (title, year, tmdb_id) VALUES ('Hercules', 1997, 11970)")
+        .run().lastInsertRowid;
+      const v = db
+        .prepare("INSERT INTO viewings (title_id, date) VALUES (?, '2025-01-03')")
+        .run(wrong).lastInsertRowid;
+      db.prepare("INSERT INTO viewing_people (viewing_id, person) VALUES (?, 'Davin')").run(v);
+      db.prepare('INSERT INTO list_items (list_id, title_id) VALUES (?, ?)').run(
+        ids.lists.family,
+        wrong
+      );
+
+      const res = await request(app).post(`/api/titles/${wrong}/merge-into/${right}`);
+
+      assert.equal(res.status, 200);
+      assert.equal(res.body.moved.viewings, 1);
+      assert.equal(res.body.into.id, right);
+      assert.equal(db.prepare('SELECT COUNT(*) AS c FROM titles WHERE id = ?').get(wrong).c, 0);
+      assert.equal(
+        db.prepare('SELECT COUNT(*) AS c FROM viewings WHERE title_id = ?').get(right).c,
+        1
+      );
+      assert.equal(
+        db.prepare('SELECT COUNT(*) AS c FROM list_items WHERE title_id = ?').get(right).c,
+        1
+      );
+      // The watcher rides along with the viewing.
+      assert.equal(
+        db.prepare('SELECT person FROM viewing_people WHERE viewing_id = ?').get(v).person,
+        'Davin'
+      );
+    });
+
+    it('keeps the target the user chose, even though it has no history', () => {
+      // The automatic sweep would keep the row with the viewings — which here is
+      // precisely the wrong one. The explicit target must win.
+      const wrong = db
+        .prepare("INSERT INTO titles (title, tmdb_id) VALUES ('Hercules (wrong)', 184315)")
+        .run().lastInsertRowid;
+      const right = db
+        .prepare("INSERT INTO titles (title, tmdb_id) VALUES ('Hercules (right)', 11970)")
+        .run().lastInsertRowid;
+      db.prepare("INSERT INTO viewings (title_id, date) VALUES (?, '2025-01-03')").run(wrong);
+
+      assert.equal(pickCanonicalId(db, [wrong, right]), wrong, 'the heuristic would pick wrong');
+
+      return request(app)
+        .post(`/api/titles/${wrong}/merge-into/${right}`)
+        .then(() => {
+          assert.ok(db.prepare('SELECT id FROM titles WHERE id = ?').get(right));
+          assert.equal(db.prepare('SELECT COUNT(*) AS c FROM titles WHERE id = ?').get(wrong).c, 0);
+        });
+    });
+
+    it('refuses to merge a title into itself', async () => {
+      const res = await request(app).post(
+        `/api/titles/${ids.titles.princessBride}/merge-into/${ids.titles.princessBride}`
+      );
+      assert.equal(res.status, 400);
+    });
+
+    it('404s when either title is missing', async () => {
+      const a = await request(app).post(`/api/titles/999999/merge-into/${ids.titles.spiritedAway}`);
+      const b = await request(app).post(`/api/titles/${ids.titles.spiritedAway}/merge-into/999999`);
+      assert.equal(a.status, 404);
+      assert.equal(b.status, 404);
+    });
+  });
+
+  // Deleting outright — for entries that shouldn't exist at all (a mis-scanned
+  // DVD, a bad match logged by mistake).
+  describe('DELETE /api/titles/:id', () => {
+    it('removes the title and everything hanging off it', async () => {
+      const id = db
+        .prepare("INSERT INTO titles (title) VALUES ('Phantom DVD')")
+        .run().lastInsertRowid;
+      const v = db
+        .prepare("INSERT INTO viewings (title_id, date) VALUES (?, '2025-05-05')")
+        .run(id).lastInsertRowid;
+      db.prepare("INSERT INTO viewing_people (viewing_id, person) VALUES (?, 'Gordon')").run(v);
+      db.prepare('INSERT INTO list_items (list_id, title_id) VALUES (?, ?)').run(
+        ids.lists.solo,
+        id
+      );
+      db.prepare(
+        "INSERT INTO shortlists (title_id, person, context) VALUES (?, 'Gordon', 'solo')"
+      ).run(id);
+      db.prepare("INSERT INTO collection (title_id, format) VALUES (?, 'dvd')").run(id);
+      db.prepare(
+        "INSERT INTO show_status (title_id, person, status) VALUES (?, 'Gordon', 'watching')"
+      ).run(id);
+
+      const res = await request(app).delete(`/api/titles/${id}`);
+
+      assert.equal(res.status, 200);
+      assert.deepEqual(res.body.removed, {
+        viewings: 1,
+        listItems: 1,
+        shortlists: 1,
+        collection: 1,
+        showStatus: 1,
+      });
+      assert.equal(db.prepare('SELECT COUNT(*) AS c FROM titles WHERE id = ?').get(id).c, 0);
+      for (const table of ['viewings', 'list_items', 'shortlists', 'collection', 'show_status']) {
+        assert.equal(
+          db.prepare(`SELECT COUNT(*) AS c FROM ${table} WHERE title_id = ?`).get(id).c,
+          0,
+          `${table} rows should be gone`
+        );
+      }
+      // viewing_people hangs off the viewing, not the title — it must go too, or
+      // it's orphaned rows forever.
+      assert.equal(
+        db.prepare('SELECT COUNT(*) AS c FROM viewing_people WHERE viewing_id = ?').get(v).c,
+        0
+      );
+    });
+
+    it('reports the footprint first so the confirmation can name the cost', async () => {
+      const id = db
+        .prepare("INSERT INTO titles (title) VALUES ('Phantom DVD')")
+        .run().lastInsertRowid;
+      db.prepare("INSERT INTO viewings (title_id, date) VALUES (?, '2025-05-05')").run(id);
+      db.prepare("INSERT INTO collection (title_id, format) VALUES (?, 'dvd')").run(id);
+
+      const res = await request(app).get(`/api/titles/${id}/footprint`);
+      assert.equal(res.status, 200);
+      assert.equal(res.body.viewings, 1);
+      assert.equal(res.body.collection, 1);
+      assert.equal(res.body.listItems, 0);
+    });
+
+    it('404s for a title that is already gone', async () => {
+      assert.equal((await request(app).delete('/api/titles/999999')).status, 404);
+      assert.equal((await request(app).get('/api/titles/999999/footprint')).status, 404);
+    });
+
+    it('leaves other titles untouched', async () => {
+      const before = db.prepare('SELECT COUNT(*) AS c FROM titles').get().c;
+      const id = db
+        .prepare("INSERT INTO titles (title) VALUES ('Phantom DVD')")
+        .run().lastInsertRowid;
+      await request(app).delete(`/api/titles/${id}`);
+      assert.equal(db.prepare('SELECT COUNT(*) AS c FROM titles').get().c, before);
+    });
+  });
 });

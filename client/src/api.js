@@ -33,12 +33,17 @@ export async function api(path, options = {}) {
   const res = await fetch(`${BASE}${path}`, { ...options, headers });
   if (!res.ok) {
     let message = `Request failed: ${res.status}`;
+    let body = null;
     try {
-      const body = await res.clone().json();
+      body = await res.clone().json();
       if (body.error) message = body.error;
     } catch {}
     const err = new Error(message);
     err.status = res.status;
+    // The whole payload, not just the message — some errors carry data the
+    // caller needs to offer a way out (e.g. the 409 from re-matching a title
+    // includes `conflictTitleId`, which becomes a "merge into it" button).
+    err.body = body;
     throw err;
   }
   return res;
