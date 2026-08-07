@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { api } from '../api';
 import { useFamily } from '../context/FamilyContext';
 import { parseJSON } from '../utils';
+import { tagLabel } from '../lib/tags';
 
 /** A single viewing on the title detail page: shows it, and edits it inline. */
 export default function ViewingItem({ v, onDelete, onSaved }) {
@@ -204,7 +205,7 @@ export default function ViewingItem({ v, onDelete, onSaved }) {
                     : 'bg-slate-700 text-slate-400 hover:bg-slate-600'
                 }`}
               >
-                {tag.replace(/_/g, ' ')}
+                {tagLabel(tag)}
               </button>
             ))}
           </div>
@@ -306,7 +307,7 @@ export default function ViewingItem({ v, onDelete, onSaved }) {
         <div className="flex flex-wrap gap-1 mt-1.5">
           {draft.tags.map((t) => (
             <span key={t} className="text-xs bg-slate-700 text-slate-400 rounded px-1.5 py-0.5">
-              {t.replace(/_/g, ' ')}
+              {tagLabel(t)}
             </span>
           ))}
         </div>
