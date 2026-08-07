@@ -4,27 +4,14 @@ import { usePerson } from '../context/PersonContext';
 import { useFamily } from '../context/FamilyContext';
 import { useOnEscape } from '../lib/a11y';
 import { findOrCreateTitleFromTmdb } from '../lib/tmdb';
-// family_movie_night is intentionally NOT here — it has its own prominent toggle
-// near the top of the form (it drives the choosing rotation, so it shouldn't be
-// buried among incidental tags).
+import { COMMON_TAGS, tagLabel } from '../lib/tags';
+
 // Today's date as YYYY-MM-DD in the *viewer's* timezone. NOT new Date().toISOString()
 // — that's UTC, which rolls over to "tomorrow" on Pacific-evening logs.
 function todayLocal() {
   const d = new Date();
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
 }
-
-const COMMON_TAGS = [
-  'solo',
-  'cinema',
-  'plane',
-  'mubi',
-  'viff',
-  'christmas',
-  'birthday',
-  'curacao',
-  'unfinished',
-];
 
 export default function LogViewing({
   titleId,
@@ -476,7 +463,7 @@ export default function LogViewing({
                   onClick={() => toggleTag(t)}
                   className={`px-2.5 py-1 rounded-full text-xs font-medium transition-colors ${form.tags.includes(t) ? 'bg-slate-600 text-white' : 'bg-slate-800 text-slate-400 hover:bg-slate-700'}`}
                 >
-                  {t.replace(/_/g, ' ')}
+                  {tagLabel(t)}
                 </button>
               ))}
             </div>

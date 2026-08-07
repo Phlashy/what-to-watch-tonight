@@ -4,6 +4,7 @@ import { api } from '../api';
 import LogViewing from '../components/LogViewing';
 import { useFamily } from '../context/FamilyContext';
 import { useFromState } from '../lib/useFromState';
+import { tagLabel } from '../lib/tags';
 import { parseJSON } from '../utils';
 
 const STATUS_LABELS = {
@@ -86,7 +87,7 @@ function ViewingRow({ v }) {
             <div className="flex flex-wrap gap-1 mt-1">
               {tags.slice(0, 3).map((t) => (
                 <span key={t} className="text-xs bg-slate-700 text-slate-400 rounded px-1.5 py-0.5">
-                  {t.replace(/_/g, ' ')}
+                  {tagLabel(t)}
                 </span>
               ))}
             </div>
