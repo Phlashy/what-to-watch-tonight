@@ -297,8 +297,12 @@ function foldShortlist() {}
  * Merge one group of duplicate rows into a single title.
  * @returns a report of what moved, for logging.
  */
-function mergeGroup(db, ids) {
-  const canonicalId = pickCanonicalId(db, ids);
+function mergeGroup(db, ids, forcedCanonicalId = null) {
+  // The automatic sweep picks the survivor by history. A person merging two
+  // titles by hand has already decided which one is right — usually the one with
+  // NO history, because the wrong row is the one that got watched — so let the
+  // caller override rather than second-guessing them.
+  const canonicalId = forcedCanonicalId ?? pickCanonicalId(db, ids);
   const otherIds = ids.filter((id) => id !== canonicalId);
   const canonical = db.prepare('SELECT id, title, year FROM titles WHERE id = ?').get(canonicalId);
   const removed = otherIds.map((id) =>

@@ -8,6 +8,7 @@ export default function TMDBPicker({
   titleType = 'movie',
   onClose,
   onEnriched,
+  onMerged,
 }) {
   useOnEscape(onClose);
   const [query, setQuery] = useState(initialQuery);
@@ -15,6 +16,9 @@ export default function TMDBPicker({
   const [results, setResults] = useState([]);
   const [loading, setLoading] = useState(false);
   const [enriching, setEnriching] = useState(null);
+  const [conflict, setConflict] = useState(null);
+  const [merging, setMerging] = useState(false);
+  const [error, setError] = useState('');
 
   const search = useCallback(async () => {
     setLoading(true);
@@ -38,6 +42,7 @@ export default function TMDBPicker({
 
   async function pick(tmdbResult) {
     setEnriching(tmdbResult.id);
+    setConflict(null);
     try {
       const res = await api(`/api/tmdb/enrich/${titleId}`, {
         method: 'POST',
@@ -47,8 +52,31 @@ export default function TMDBPicker({
       const enriched = await res.json();
       onEnriched(enriched);
       onClose();
+    } catch (e) {
+      // The film you're pointing at is already in the library under another row.
+      // That's not really an error — it means these two rows are the same film,
+      // and the fix is to merge them. Offer that instead of a dead end.
+      if (e.status === 409 && e.body?.conflictTitleId) {
+        setConflict({ id: e.body.conflictTitleId, message: e.message });
+      } else {
+        setError(e.message || 'Something went wrong.');
+      }
     } finally {
       setEnriching(null);
+    }
+  }
+
+  async function mergeIntoConflict() {
+    setMerging(true);
+    try {
+      const res = await api(`/api/titles/${titleId}/merge-into/${conflict.id}`, { method: 'POST' });
+      const result = await res.json();
+      // This title no longer exists — the caller has to send us somewhere else.
+      onMerged?.(result.into.id, result);
+      onClose();
+    } catch (e) {
+      setError(e.message || 'Merge failed.');
+      setMerging(false);
     }
   }
 
@@ -98,6 +126,34 @@ export default function TMDBPicker({
             ))}
           </div>
         </div>
+
+        {/* Already-in-the-library conflict — offer the merge rather than a dead end */}
+        {conflict && (
+          <div className="mx-4 mt-3 rounded-xl border border-amber-600/40 bg-amber-950/30 p-3">
+            <p className="text-sm text-amber-200 font-medium">{conflict.message}</p>
+            <p className="text-xs text-slate-400 mt-1">
+              That means these are the same film, listed twice. Merging moves this one's viewings,
+              lists and stars onto it, then removes this duplicate.
+            </p>
+            <div className="flex gap-2 mt-3">
+              <button
+                onClick={mergeIntoConflict}
+                disabled={merging}
+                className="flex-1 bg-amber-500 hover:bg-amber-400 disabled:opacity-50 text-black text-sm font-semibold py-2 rounded-lg transition-colors"
+              >
+                {merging ? 'Merging…' : 'Merge them'}
+              </button>
+              <button
+                onClick={() => setConflict(null)}
+                className="px-4 text-sm text-slate-400 hover:text-white"
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        )}
+
+        {error && <p className="mx-4 mt-3 text-sm text-red-400">{error}</p>}
 
         {/* Results */}
         <div className="overflow-y-auto flex-1 px-2 pt-2 pb-modal-safe">

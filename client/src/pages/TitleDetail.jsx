@@ -53,6 +53,7 @@ export default function TitleDetail() {
   };
   const [title, setTitle] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [deleting, setDeleting] = useState(false);
   const [showLog, setShowLog] = useState(false);
   const [showTMDB, setShowTMDB] = useState(false);
   const [showRatings, setShowRatings] = useState(false);
@@ -228,6 +229,58 @@ export default function TitleDetail() {
       return;
     await api(`/api/viewings/${viewingId}`, { method: 'DELETE' });
     loadTitle();
+  }
+
+  async function deleteTitle() {
+    // Ask the server what this title is carrying, so the confirmation can name
+    // the cost. "Delete Hercules?" is easy to click through; "this also deletes 2
+    // viewings" is not — and watch history is the one thing here that can't be
+    // looked up again.
+    let footprint;
+    try {
+      footprint = await (await api(`/api/titles/${title.id}/footprint`)).json();
+    } catch {
+      footprint = { viewings: 0, listItems: 0, shortlists: 0, collection: 0, showStatus: 0 };
+    }
+
+    const losses = [
+      [footprint.viewings, 'viewing', 'viewings'],
+      [footprint.listItems, 'list', 'lists'],
+      [footprint.collection, 'disc/digital copy', 'disc/digital copies'],
+      [footprint.shortlists, 'star', 'stars'],
+    ]
+      .filter(([n]) => n > 0)
+      .map(([n, one, many]) => `${n} ${n === 1 ? one : many}`);
+
+    const message = losses.length
+      ? `Delete "${title.title}"? This also removes ${losses.join(', ')}. It can't be undone.`
+      : `Delete "${title.title}"? It isn't on any list and has no viewings.`;
+
+    if (
+      !(await confirm({
+        // Only call it "history" when watch history is genuinely at stake —
+        // that's the part that can't be looked up again.
+        title: footprint.viewings > 0 ? 'Delete title and its history?' : 'Delete title?',
+        message,
+        confirmLabel: 'Delete',
+        destructive: true,
+      }))
+    )
+      return;
+
+    setDeleting(true);
+    try {
+      await api(`/api/titles/${title.id}`, { method: 'DELETE' });
+      goBack();
+    } catch (e) {
+      setDeleting(false);
+      await confirm({
+        title: "Couldn't delete",
+        message: e.message || 'Something went wrong.',
+        cancelLabel: null,
+        confirmLabel: 'OK',
+      });
+    }
   }
 
   if (loading)
@@ -958,6 +1011,18 @@ export default function TitleDetail() {
             </div>
           </div>
         )}
+
+        {/* Delete — last thing on the page, understated, for entries that
+            shouldn't exist at all (a mis-scanned DVD, a wrong match). */}
+        <div className="pt-2 pb-2 text-center">
+          <button
+            onClick={deleteTitle}
+            disabled={deleting}
+            className="text-xs text-slate-500 hover:text-red-400 disabled:opacity-50 transition-colors px-3 py-2"
+          >
+            {deleting ? 'Deleting…' : 'Delete this title'}
+          </button>
+        </div>
       </div>
 
       {showLog && (
@@ -990,6 +1055,13 @@ export default function TitleDetail() {
           initialQuery={title.title}
           titleType={title.type}
           onClose={() => setShowTMDB(false)}
+          onMerged={(targetId) => {
+            // This title has just been folded into another and no longer exists,
+            // so there's nothing to reload — replace it in history (a back press
+            // must not return to a dead id) and show the survivor instead.
+            setShowTMDB(false);
+            navigate(`/title/${targetId}`, { replace: true, state: location.state });
+          }}
           onEnriched={() => {
             setShowTMDB(false);
             loadTitle();
