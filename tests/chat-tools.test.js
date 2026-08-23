@@ -81,6 +81,111 @@ describe('chat assistant tools', () => {
       assert.ok(Array.isArray(results));
       assert.ok(results.length <= 50);
     });
+
+    describe('critic ratings, runtime, and age certificate', () => {
+      before(() => {
+        // Back-fill the OMDb-sourced columns the search now filters/sorts on.
+        // Runtimes from the base seed: Princess Bride 98, Spirited Away 125,
+        // Breaking Bad 49 (a show). Asterix has none — give it 85 so it's the
+        // shortest movie, and leave its critic scores null to test NULLS-last.
+        const set = db.prepare(
+          'UPDATE titles SET rt_score = ?, imdb_rating = ?, metacritic_score = ?, content_rating = ?, runtime_minutes = COALESCE(?, runtime_minutes) WHERE id = ?'
+        );
+        set.run(94, 8.0, 77, 'PG', null, ids.titles.princessBride);
+        set.run(97, 8.6, 96, 'PG', null, ids.titles.spiritedAway);
+        set.run(96, 9.5, 87, 'TV-MA', null, ids.titles.breakingBad);
+        set.run(null, null, null, 'PG', 85, ids.titles.asterix);
+      });
+
+      it('returns the critic scores, runtime, and certificate on each result', () => {
+        const [pb] = call('search_titles', { query: 'princess' });
+        assert.equal(pb.rt_score, 94);
+        assert.equal(pb.imdb_rating, 8.0);
+        assert.equal(pb.metacritic_score, 77);
+        assert.equal(pb.content_rating, 'PG');
+        assert.equal(pb.runtime_minutes, 98);
+      });
+
+      it('filters by a Rotten Tomatoes floor (min_rt), excluding unscored titles', () => {
+        const results = call('search_titles', { min_rt: 96 });
+        assert.deepEqual(
+          results.map((t) => t.title).sort(),
+          ['Breaking Bad', 'Spirited Away'] // 94 (PB) excluded, null (Asterix) excluded
+        );
+      });
+
+      it('filters by an IMDb floor (min_imdb)', () => {
+        const results = call('search_titles', { min_imdb: 9 });
+        assert.deepEqual(
+          results.map((t) => t.title),
+          ['Breaking Bad']
+        );
+      });
+
+      it('filters by a runtime window (movies under 100 minutes)', () => {
+        const results = call('search_titles', { type: 'movie', max_runtime: 100 });
+        assert.deepEqual(results.map((t) => t.title).sort(), [
+          'Asterix: The Secret of the Magic Potion', // 85
+          'The Princess Bride', // 98
+        ]);
+      });
+
+      it('filters by age certificate — array of allowed certs', () => {
+        const pg = call('search_titles', { content_rating: ['PG'] });
+        assert.deepEqual(pg.map((t) => t.title).sort(), [
+          'Asterix: The Secret of the Magic Potion',
+          'Spirited Away',
+          'The Princess Bride',
+        ]);
+      });
+
+      it('filters by age certificate — single string, case-insensitive', () => {
+        const results = call('search_titles', { content_rating: 'tv-ma' });
+        assert.deepEqual(
+          results.map((t) => t.title),
+          ['Breaking Bad']
+        );
+      });
+
+      it('sorts by Rotten Tomatoes highest-first, unscored titles last', () => {
+        const results = call('search_titles', { sort: 'rt_score' });
+        assert.deepEqual(
+          results.map((t) => t.title),
+          [
+            'Spirited Away', // 97
+            'Breaking Bad', // 96
+            'The Princess Bride', // 94
+            'Asterix: The Secret of the Magic Potion', // null → last
+          ]
+        );
+      });
+
+      it('sorts by runtime shortest-first', () => {
+        const results = call('search_titles', { type: 'movie', sort: 'runtime' });
+        assert.deepEqual(
+          results.map((t) => t.title),
+          [
+            'Asterix: The Secret of the Magic Potion', // 85
+            'The Princess Bride', // 98
+            'Spirited Away', // 125
+          ]
+        );
+      });
+
+      it('honours sort_dir to flip the default direction', () => {
+        const asc = call('search_titles', { sort: 'rt_score', sort_dir: 'asc' });
+        // Ascending, but unscored (Asterix) still sorts last.
+        assert.deepEqual(
+          asc.map((t) => t.title),
+          [
+            'The Princess Bride', // 94
+            'Breaking Bad', // 96
+            'Spirited Away', // 97
+            'Asterix: The Secret of the Magic Potion', // null → last
+          ]
+        );
+      });
+    });
   });
 
   describe('get_title_details', () => {
