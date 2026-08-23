@@ -29,6 +29,7 @@ CRITICAL RULES:
 - You MUST use tools for EVERY question about the family's movies, shows, viewings, ratings, or lists. NEVER answer from your own knowledge.
 - You know NOTHING about what this family has watched, rated, or owns. The ONLY source of truth is the tools.
 - If asked about a director, actor, or genre — ALWAYS call search_titles first. Do not guess.
+- search_titles can also filter and sort by critic ratings (Rotten Tomatoes = rt, IMDb, Metacritic), runtime in minutes, and age certificate (content_rating, e.g. G / PG / PG-13 / R / TV-14 / TV-MA). Use these for questions like "best-reviewed movies", "something under 100 minutes", "a well-reviewed film we can watch with the kids" (content_rating ["G","PG"], sort rt_score), or "highest Rotten Tomatoes score". Report the relevant score/runtime/certificate you sorted or filtered by.
 - If a search returns results, report ALL of them, not just some.
 - If a search returns no results, say "I couldn't find any in the database" — never make claims about what exists or doesn't exist without checking.
 - For "which director/genre have we watched the most" or similar aggregate/ranking questions, ALWAYS use get_top_directors or get_top_genres. These tools do the counting for you — never try to count from raw viewing data.
@@ -48,7 +49,7 @@ const tools = [
   {
     name: 'search_titles',
     description:
-      'Search for movies and TV shows by title, director, cast, genre, or type. Returns matching titles with basic info and view counts.',
+      "Search, filter, and sort movies and TV shows. Match by title, director, cast, genre, or type, and narrow or order by critic ratings (Rotten Tomatoes, IMDb, Metacritic), runtime in minutes, or age certificate (G, PG, PG-13, R, TV-14, TV-MA, …). Each result includes those critic scores, runtime, age certificate, the family's own average rating, and view count.",
     input_schema: {
       type: 'object',
       properties: {
@@ -58,7 +59,46 @@ const tools = [
         },
         type: { type: 'string', enum: ['movie', 'show'], description: 'Filter by type' },
         genre: { type: 'string', description: 'Filter by genre (partial match)' },
-        limit: { type: 'number', description: 'Max results (default 10)' },
+        min_rt: {
+          type: 'number',
+          description: 'Only titles with a Rotten Tomatoes Tomatometer at or above this (0–100)',
+        },
+        min_imdb: {
+          type: 'number',
+          description: 'Only titles with an IMDb rating at or above this (0–10)',
+        },
+        min_metacritic: {
+          type: 'number',
+          description: 'Only titles with a Metacritic score at or above this (0–100)',
+        },
+        min_runtime: { type: 'number', description: 'Only titles at least this many minutes long' },
+        max_runtime: { type: 'number', description: 'Only titles at most this many minutes long' },
+        content_rating: {
+          type: 'array',
+          items: { type: 'string' },
+          description:
+            'Only titles whose age certificate is one of these (case-insensitive exact match), e.g. ["G","PG"] for family-friendly or ["PG-13","R"]. A single value may be passed as a plain string.',
+        },
+        sort: {
+          type: 'string',
+          enum: [
+            'title',
+            'year',
+            'rt_score',
+            'imdb_rating',
+            'metacritic_score',
+            'runtime',
+            'family_rating',
+          ],
+          description:
+            'Sort order (default title). rt_score / imdb_rating / metacritic_score / family_rating sort highest-first; runtime shortest-first; year newest-first. Use sort_dir to override. Titles missing the chosen value sort last.',
+        },
+        sort_dir: {
+          type: 'string',
+          enum: ['asc', 'desc'],
+          description: 'Override the default direction for the chosen sort',
+        },
+        limit: { type: 'number', description: 'Max results (default 10, max 50)' },
       },
       required: [],
     },
@@ -211,8 +251,37 @@ const tools = [
 // Each takes the db handle as its first argument (injected from app.locals by
 // the route, or directly by tests) — same pattern as lib/rotation.js.
 
-function toolSearchTitles(db, { query, type, genre, limit = 10 }) {
+// Column each `sort` value maps to, plus its default direction. `family_rating`
+// targets the computed avg_rating alias (SQLite allows ordering by an alias).
+const SEARCH_SORTS = {
+  title: { col: 't.title', dir: 'ASC' },
+  year: { col: 't.year', dir: 'DESC' },
+  rt_score: { col: 't.rt_score', dir: 'DESC' },
+  imdb_rating: { col: 't.imdb_rating', dir: 'DESC' },
+  metacritic_score: { col: 't.metacritic_score', dir: 'DESC' },
+  runtime: { col: 't.runtime_minutes', dir: 'ASC' },
+  family_rating: { col: 'avg_rating', dir: 'DESC' },
+};
+
+function toolSearchTitles(
+  db,
+  {
+    query,
+    type,
+    genre,
+    min_rt,
+    min_imdb,
+    min_metacritic,
+    min_runtime,
+    max_runtime,
+    content_rating,
+    sort,
+    sort_dir,
+    limit = 10,
+  }
+) {
   let sql = `SELECT t.id, t.title, t.year, t.type, t.director, t.genre, t.runtime_minutes,
+    t.rt_score, t.imdb_rating, t.metacritic_score, t.content_rating,
     (SELECT COUNT(*) FROM viewings v WHERE v.title_id = t.id) as view_count,
     (SELECT ROUND(AVG(r), 1) FROM (
       SELECT vp.rating as r FROM viewings v2 JOIN viewing_people vp ON v2.id = vp.viewing_id
@@ -236,7 +305,44 @@ function toolSearchTitles(db, { query, type, genre, limit = 10 }) {
     sql += ' AND t.genre LIKE ?';
     params.push(`%${genre}%`);
   }
-  sql += ' ORDER BY t.title ASC LIMIT ?';
+  // Rating floors (a title with no score for that source is excluded).
+  if (min_rt != null) {
+    sql += ' AND t.rt_score >= ?';
+    params.push(min_rt);
+  }
+  if (min_imdb != null) {
+    sql += ' AND t.imdb_rating >= ?';
+    params.push(min_imdb);
+  }
+  if (min_metacritic != null) {
+    sql += ' AND t.metacritic_score >= ?';
+    params.push(min_metacritic);
+  }
+  // Runtime window (minutes).
+  if (min_runtime != null) {
+    sql += ' AND t.runtime_minutes >= ?';
+    params.push(min_runtime);
+  }
+  if (max_runtime != null) {
+    sql += ' AND t.runtime_minutes <= ?';
+    params.push(max_runtime);
+  }
+  // Age certificate — accept an array or a single string; exact, case-insensitive.
+  if (content_rating != null) {
+    const certs = (Array.isArray(content_rating) ? content_rating : [content_rating])
+      .map((c) => String(c).trim().toUpperCase())
+      .filter(Boolean);
+    if (certs.length) {
+      sql += ` AND UPPER(t.content_rating) IN (${certs.map(() => '?').join(',')})`;
+      params.push(...certs);
+    }
+  }
+  // Sort — validated against the whitelist above; unknown values fall back to title.
+  const chosen = SEARCH_SORTS[sort] || SEARCH_SORTS.title;
+  const dir = sort_dir === 'asc' ? 'ASC' : sort_dir === 'desc' ? 'DESC' : chosen.dir;
+  // Titles missing the sort value go last (except plain title, which is never null).
+  const nulls = chosen.col === 't.title' ? '' : ' NULLS LAST';
+  sql += ` ORDER BY ${chosen.col} ${dir}${nulls}, t.title ASC LIMIT ?`;
   params.push(Math.min(limit, 50));
   return db.prepare(sql).all(...params);
 }
@@ -273,6 +379,10 @@ function toolGetTitleDetails(db, { title_id }) {
     director: title.director,
     genre: title.genre,
     runtime_minutes: title.runtime_minutes,
+    content_rating: title.content_rating,
+    rt_score: title.rt_score,
+    imdb_rating: title.imdb_rating,
+    metacritic_score: title.metacritic_score,
     synopsis: title.synopsis,
     cast: title.cast,
     viewings,

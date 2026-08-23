@@ -12,6 +12,13 @@ followed it — see `docs/AUDIT-OUTCOME.md` for the story and the result. Tiers
 
 ### Added
 
+- **The Ask assistant can search, filter, and sort by critic ratings, runtime,
+  and age certificate**: its `search_titles` tool now accepts Rotten Tomatoes /
+  IMDb / Metacritic floors, a runtime window (minutes), and an age-certificate
+  filter (e.g. `["G","PG"]`), plus sorting by any of those (and the family's own
+  average rating). Each result now carries the critic scores, runtime, and
+  certificate. So "best-reviewed film under 100 minutes we can watch with the
+  kids" is now answerable.
 - **Sorting across the app**: lists (Default / Name / Most titles / Recently
   updated), a list's titles (Manual / Title / Year / Rating / Recently added),
   and the Collection (Recently added / Title / Year). Each surface remembers its
