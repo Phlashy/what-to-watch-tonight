@@ -12,6 +12,18 @@ followed it — see `docs/AUDIT-OUTCOME.md` for the story and the result. Tiers
 
 ### Added
 
+- **The Ask assistant is much better at finding something to watch.** Three
+  changes: (1) `search_titles` can now filter to **unwatched** titles (no logged
+  viewing) and **exclude genres** (e.g. "not animated"), on top of the existing
+  critic-rating / runtime / age-certificate filters — so a whole request's
+  constraints resolve in one search instead of the assistant filtering in its
+  head across turns (which dropped and re-added titles). (2) A new
+  **`suggest_watchlist`** tool recommends from the family's own lists, defaulting
+  to unwatched, for open-ended "just pick us something". (3) The assistant now
+  runs on **Claude Sonnet 5** (was Haiku) with tightened instructions: it stops
+  interrogating you when you've given constraints, maps "family-friendly" to age
+  certificates and "not animated" to a genre exclusion, and is honest that
+  "unwatched" means "no record of watching", not "never seen".
 - **The Ask assistant can search, filter, and sort by critic ratings, runtime,
   and age certificate**: its `search_titles` tool now accepts Rotten Tomatoes /
   IMDb / Metacritic floors, a runtime window (minutes), and an age-certificate
