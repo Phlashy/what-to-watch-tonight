@@ -185,6 +185,73 @@ describe('chat assistant tools', () => {
           ]
         );
       });
+
+      it('filters to unwatched titles (no logged viewing)', () => {
+        // Only Asterix has zero viewings in the seed.
+        assert.deepEqual(
+          call('search_titles', { watched: 'unwatched' }).map((t) => t.title),
+          ['Asterix: The Secret of the Magic Potion']
+        );
+      });
+
+      it('filters to watched titles', () => {
+        assert.deepEqual(
+          call('search_titles', { watched: 'watched' })
+            .map((t) => t.title)
+            .sort(),
+          ['Breaking Bad', 'Spirited Away', 'The Princess Bride']
+        );
+      });
+
+      it('excludes a genre, as an array or a single string', () => {
+        const expected = ['Breaking Bad', 'The Princess Bride']; // the Animation titles drop out
+        assert.deepEqual(
+          call('search_titles', { exclude_genre: ['Animation'] })
+            .map((t) => t.title)
+            .sort(),
+          expected
+        );
+        assert.deepEqual(
+          call('search_titles', { exclude_genre: 'Animation' })
+            .map((t) => t.title)
+            .sort(),
+          expected
+        );
+      });
+    });
+  });
+
+  describe('suggest_watchlist', () => {
+    before(() => {
+      // Put an unwatched title on a list so suggestions have something to return
+      // (every other list title in the seed has been watched). The lists tests
+      // never assert the solo list's count, so this stays contamination-free.
+      db.prepare('INSERT INTO list_items (list_id, title_id, priority) VALUES (?, ?, ?)').run(
+        ids.lists.solo,
+        ids.titles.asterix,
+        5
+      );
+    });
+
+    it('defaults to unwatched titles drawn from the family lists', () => {
+      const results = call('suggest_watchlist', {});
+      assert.deepEqual(
+        results.map((t) => t.title),
+        ['Asterix: The Secret of the Magic Potion']
+      );
+      assert.equal(results[0].view_count, 0);
+      assert.equal(results[0].on_list_count, 1);
+    });
+
+    it('applies the shared filters (runtime, exclude_genre)', () => {
+      assert.equal(call('suggest_watchlist', { max_runtime: 80 }).length, 0); // Asterix runs 85
+      assert.equal(call('suggest_watchlist', { max_runtime: 90 }).length, 1);
+      assert.equal(call('suggest_watchlist', { exclude_genre: ['Animation'] }).length, 0);
+    });
+
+    it('can include watched titles and scope to a single list', () => {
+      const family = call('suggest_watchlist', { watched: 'any', list_name: 'family_to_watch' });
+      assert.deepEqual(family.map((t) => t.title).sort(), ['Spirited Away', 'The Princess Bride']);
     });
   });
 

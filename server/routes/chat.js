@@ -5,8 +5,17 @@ const rotationCore = require('../lib/rotation');
 
 const anthropic = new Anthropic(); // reads ANTHROPIC_API_KEY from env
 
-// Haiku: fast + cheap, plenty for tool-driven lookups over a family database.
-const MODEL = 'claude-haiku-4-5';
+// Sonnet 5 — noticeably better judgment than Haiku at the "find us something to
+// watch" reasoning this assistant exists for, at ~3x the token cost (fine for a
+// family app's low volume). Sonnet 5 rejects temperature/top_p and budget_tokens
+// (we set neither) and runs adaptive thinking; we bound it with effort:"medium"
+// to stay responsive on phones. Tunable — drop to "low" for snappier/cheaper,
+// raise to "high" for smarter.
+const MODEL = 'claude-sonnet-5';
+const EFFORT = 'medium';
+// Adaptive thinking needs headroom on top of the answer, so this is well above
+// the old Haiku 1024. Non-streaming, so kept well under the HTTP timeout.
+const MAX_TOKENS = 4096;
 
 // --- System prompt ---
 
@@ -29,7 +38,11 @@ CRITICAL RULES:
 - You MUST use tools for EVERY question about the family's movies, shows, viewings, ratings, or lists. NEVER answer from your own knowledge.
 - You know NOTHING about what this family has watched, rated, or owns. The ONLY source of truth is the tools.
 - If asked about a director, actor, or genre — ALWAYS call search_titles first. Do not guess.
-- search_titles can also filter and sort by critic ratings (Rotten Tomatoes = rt, IMDb, Metacritic), runtime in minutes, and age certificate (content_rating, e.g. G / PG / PG-13 / R / TV-14 / TV-MA). Use these for questions like "best-reviewed movies", "something under 100 minutes", "a well-reviewed film we can watch with the kids" (content_rating ["G","PG"], sort rt_score), or "highest Rotten Tomatoes score". Report the relevant score/runtime/certificate you sorted or filtered by.
+- search_titles filters and sorts by: critic ratings (Rotten Tomatoes = rt, IMDb, Metacritic), runtime in minutes (min_runtime/max_runtime), age certificate (content_rating, e.g. G / PG / PG-13 / R / TV-14 / TV-MA), whether the family has watched it (watched: "unwatched" | "watched"), and genre exclusion (exclude_genre, e.g. ["Animation"] for "not animated"). Combine ALL of a request's constraints into ONE search call — the tool does the filtering, so you don't have to reason it out across several calls.
+- FINDING SOMETHING TO WATCH is the main job. When the user asks you to find/suggest/recommend a movie with constraints, DON'T interrogate them — take the constraints you have and run one search (or suggest_watchlist) right away, then show the full list. Only ask a clarifying question if you genuinely have nothing to search on. Map "family-friendly"/"for the kids" to content_rating like ["G","PG","PG-13"] (and consider genre "Family"); map "haven't seen / something new / new to us" to watched:"unwatched"; map "not animated" to exclude_genre:["Animation"].
+- "unwatched" only means there's no logged viewing — say "no record of watching", never "you've never seen". If the user says they've actually seen one, just drop it.
+- For open-ended "what should we watch" / "pick us something" (no hard filters), prefer suggest_watchlist — it draws from the family's own lists and defaults to unwatched. Apply whatever filters they do give (runtime, family-friendly, not-animated).
+- Report the relevant score / runtime / certificate you filtered or sorted by so the user can choose.
 - If a search returns results, report ALL of them, not just some.
 - If a search returns no results, say "I couldn't find any in the database" — never make claims about what exists or doesn't exist without checking.
 - For "which director/genre have we watched the most" or similar aggregate/ranking questions, ALWAYS use get_top_directors or get_top_genres. These tools do the counting for you — never try to count from raw viewing data.
@@ -59,6 +72,18 @@ const tools = [
         },
         type: { type: 'string', enum: ['movie', 'show'], description: 'Filter by type' },
         genre: { type: 'string', description: 'Filter by genre (partial match)' },
+        exclude_genre: {
+          type: 'array',
+          items: { type: 'string' },
+          description:
+            'Exclude titles in these genres, e.g. ["Animation"] for "not animated". A single value may be passed as a plain string.',
+        },
+        watched: {
+          type: 'string',
+          enum: ['unwatched', 'watched', 'any'],
+          description:
+            'Filter by viewing history (default any). "unwatched" = the family has no logged viewing (their log is not a lifetime record, so phrase this as "no record of watching", not "never seen"); "watched" = at least one logged viewing.',
+        },
         min_rt: {
           type: 'number',
           description: 'Only titles with a Rotten Tomatoes Tomatometer at or above this (0–100)',
@@ -99,6 +124,43 @@ const tools = [
           description: 'Override the default direction for the chosen sort',
         },
         limit: { type: 'number', description: 'Max results (default 10, max 50)' },
+      },
+      required: [],
+    },
+  },
+  {
+    name: 'suggest_watchlist',
+    description:
+      'Recommend something to watch by pulling from the family\'s own lists (titles they\'ve said they want to watch), defaulting to ones they haven\'t watched yet, ranked by how many lists a title appears on then list priority. Use this for open-ended "what should we watch" / "pick us something" asks. Accepts the same runtime / genre / exclude_genre / content_rating / type / watched filters as search_titles. Optionally scope to one list by internal name.',
+    input_schema: {
+      type: 'object',
+      properties: {
+        list_name: {
+          type: 'string',
+          description: 'Restrict to one list by its internal name (omit to draw from all lists)',
+        },
+        type: { type: 'string', enum: ['movie', 'show'], description: 'Filter by type' },
+        genre: { type: 'string', description: 'Filter by genre (partial match)' },
+        exclude_genre: {
+          type: 'array',
+          items: { type: 'string' },
+          description: 'Exclude these genres, e.g. ["Animation"]. Single value may be a string.',
+        },
+        watched: {
+          type: 'string',
+          enum: ['unwatched', 'watched', 'any'],
+          description: 'Defaults to unwatched (no logged viewing). Pass "any" to include watched.',
+        },
+        min_rt: { type: 'number', description: 'Rotten Tomatoes floor (0–100)' },
+        min_imdb: { type: 'number', description: 'IMDb floor (0–10)' },
+        max_runtime: { type: 'number', description: 'Only titles at most this many minutes long' },
+        min_runtime: { type: 'number', description: 'Only titles at least this many minutes long' },
+        content_rating: {
+          type: 'array',
+          items: { type: 'string' },
+          description: 'Age certificates to allow, e.g. ["G","PG"]. Single value may be a string.',
+        },
+        limit: { type: 'number', description: 'Max results (default 15, max 50)' },
       },
       required: [],
     },
@@ -263,23 +325,91 @@ const SEARCH_SORTS = {
   family_rating: { col: 'avg_rating', dir: 'DESC' },
 };
 
-function toolSearchTitles(
-  db,
-  {
-    query,
-    type,
-    genre,
-    min_rt,
-    min_imdb,
-    min_metacritic,
-    min_runtime,
-    max_runtime,
-    content_rating,
-    sort,
-    sort_dir,
-    limit = 10,
+// Shared WHERE-clause builder used by search_titles and suggest_watchlist.
+// Returns SQL fragments (to be ANDed) and their bind params, in matching order.
+// `t` is the titles alias in the caller's query.
+function buildTitleFilters({
+  query,
+  type,
+  genre,
+  exclude_genre,
+  min_rt,
+  min_imdb,
+  min_metacritic,
+  min_runtime,
+  max_runtime,
+  content_rating,
+  watched,
+}) {
+  const clauses = [];
+  const params = [];
+  if (query) {
+    clauses.push('(t.title LIKE ? OR t.director LIKE ? OR t.cast LIKE ? OR t.synopsis LIKE ?)');
+    params.push(`%${query}%`, `%${query}%`, `%${query}%`, `%${query}%`);
   }
-) {
+  if (type) {
+    clauses.push('t.type = ?');
+    params.push(type);
+  }
+  if (genre) {
+    clauses.push('t.genre LIKE ?');
+    params.push(`%${genre}%`);
+  }
+  // exclude_genre — array or single string; each genre is excluded. A title with
+  // no genre recorded is kept rather than dropped.
+  if (exclude_genre != null) {
+    const ex = (Array.isArray(exclude_genre) ? exclude_genre : [exclude_genre])
+      .map((g) => String(g).trim())
+      .filter(Boolean);
+    for (const g of ex) {
+      clauses.push('(t.genre IS NULL OR t.genre NOT LIKE ?)');
+      params.push(`%${g}%`);
+    }
+  }
+  // Rating floors (a title with no score for that source is excluded).
+  if (min_rt != null) {
+    clauses.push('t.rt_score >= ?');
+    params.push(min_rt);
+  }
+  if (min_imdb != null) {
+    clauses.push('t.imdb_rating >= ?');
+    params.push(min_imdb);
+  }
+  if (min_metacritic != null) {
+    clauses.push('t.metacritic_score >= ?');
+    params.push(min_metacritic);
+  }
+  // Runtime window (minutes).
+  if (min_runtime != null) {
+    clauses.push('t.runtime_minutes >= ?');
+    params.push(min_runtime);
+  }
+  if (max_runtime != null) {
+    clauses.push('t.runtime_minutes <= ?');
+    params.push(max_runtime);
+  }
+  // Age certificate — array or single string; exact, case-insensitive.
+  if (content_rating != null) {
+    const certs = (Array.isArray(content_rating) ? content_rating : [content_rating])
+      .map((c) => String(c).trim().toUpperCase())
+      .filter(Boolean);
+    if (certs.length) {
+      clauses.push(`UPPER(t.content_rating) IN (${certs.map(() => '?').join(',')})`);
+      params.push(...certs);
+    }
+  }
+  // Watched status — from actual viewing history. "unwatched" means no logged
+  // viewing (the family log isn't a lifetime record), not proof it's unseen.
+  if (watched === 'unwatched') {
+    clauses.push('NOT EXISTS (SELECT 1 FROM viewings v WHERE v.title_id = t.id)');
+  } else if (watched === 'watched') {
+    clauses.push('EXISTS (SELECT 1 FROM viewings v WHERE v.title_id = t.id)');
+  }
+  return { clauses, params };
+}
+
+function toolSearchTitles(db, input) {
+  const { sort, sort_dir, limit = 10 } = input;
   let sql = `SELECT t.id, t.title, t.year, t.type, t.director, t.genre, t.runtime_minutes,
     t.rt_score, t.imdb_rating, t.metacritic_score, t.content_rating,
     (SELECT COUNT(*) FROM viewings v WHERE v.title_id = t.id) as view_count,
@@ -292,51 +422,8 @@ function toolSearchTitles(
       AND NOT EXISTS (SELECT 1 FROM viewing_people vp2 WHERE vp2.viewing_id = v3.id AND vp2.rating IS NOT NULL)
     )) as avg_rating
     FROM titles t WHERE 1=1`;
-  const params = [];
-  if (query) {
-    sql += ' AND (t.title LIKE ? OR t.director LIKE ? OR t.cast LIKE ? OR t.synopsis LIKE ?)';
-    params.push(`%${query}%`, `%${query}%`, `%${query}%`, `%${query}%`);
-  }
-  if (type) {
-    sql += ' AND t.type = ?';
-    params.push(type);
-  }
-  if (genre) {
-    sql += ' AND t.genre LIKE ?';
-    params.push(`%${genre}%`);
-  }
-  // Rating floors (a title with no score for that source is excluded).
-  if (min_rt != null) {
-    sql += ' AND t.rt_score >= ?';
-    params.push(min_rt);
-  }
-  if (min_imdb != null) {
-    sql += ' AND t.imdb_rating >= ?';
-    params.push(min_imdb);
-  }
-  if (min_metacritic != null) {
-    sql += ' AND t.metacritic_score >= ?';
-    params.push(min_metacritic);
-  }
-  // Runtime window (minutes).
-  if (min_runtime != null) {
-    sql += ' AND t.runtime_minutes >= ?';
-    params.push(min_runtime);
-  }
-  if (max_runtime != null) {
-    sql += ' AND t.runtime_minutes <= ?';
-    params.push(max_runtime);
-  }
-  // Age certificate — accept an array or a single string; exact, case-insensitive.
-  if (content_rating != null) {
-    const certs = (Array.isArray(content_rating) ? content_rating : [content_rating])
-      .map((c) => String(c).trim().toUpperCase())
-      .filter(Boolean);
-    if (certs.length) {
-      sql += ` AND UPPER(t.content_rating) IN (${certs.map(() => '?').join(',')})`;
-      params.push(...certs);
-    }
-  }
+  const { clauses, params } = buildTitleFilters(input);
+  for (const c of clauses) sql += ` AND ${c}`;
   // Sort — validated against the whitelist above; unknown values fall back to title.
   const chosen = SEARCH_SORTS[sort] || SEARCH_SORTS.title;
   const dir = sort_dir === 'asc' ? 'ASC' : sort_dir === 'desc' ? 'DESC' : chosen.dir;
@@ -345,6 +432,39 @@ function toolSearchTitles(
   sql += ` ORDER BY ${chosen.col} ${dir}${nulls}, t.title ASC LIMIT ?`;
   params.push(Math.min(limit, 50));
   return db.prepare(sql).all(...params);
+}
+
+// Recommendations: unwatched titles drawn from the family's own lists (things
+// they've said they want to watch), narrowed by the same filters as search and
+// ranked by how many lists a title is on, then its best (lowest) list priority.
+function toolSuggestWatchlist(db, input) {
+  const { list_name, limit = 15 } = input;
+  // Default to unwatched — the whole point of a suggestion is something new —
+  // unless the caller deliberately asks for watched/any.
+  const { clauses, params } = buildTitleFilters({
+    ...input,
+    watched: input.watched || 'unwatched',
+  });
+  let sql = `SELECT t.id, t.title, t.year, t.type, t.director, t.genre, t.runtime_minutes,
+    t.rt_score, t.imdb_rating, t.metacritic_score, t.content_rating,
+    COUNT(DISTINCT li.list_id) as on_list_count,
+    (SELECT COUNT(*) FROM viewings v WHERE v.title_id = t.id) as view_count
+    FROM titles t
+    JOIN list_items li ON li.title_id = t.id
+    JOIN lists l ON li.list_id = l.id
+    WHERE 1=1`;
+  const allParams = [];
+  if (list_name) {
+    sql += ' AND l.name = ?';
+    allParams.push(list_name);
+  }
+  for (const c of clauses) sql += ` AND ${c}`;
+  allParams.push(...params);
+  sql += ` GROUP BY t.id
+    ORDER BY on_list_count DESC, MIN(li.priority) ASC, t.title ASC
+    LIMIT ?`;
+  allParams.push(Math.min(limit, 50));
+  return db.prepare(sql).all(...allParams);
 }
 
 function toolGetTitleDetails(db, { title_id }) {
@@ -620,6 +740,8 @@ function executeToolCall(db, name, input, config) {
     switch (name) {
       case 'search_titles':
         return toolSearchTitles(db, input);
+      case 'suggest_watchlist':
+        return toolSuggestWatchlist(db, input);
       case 'get_title_details':
         return toolGetTitleDetails(db, input);
       case 'get_viewing_history':
@@ -683,7 +805,8 @@ router.post('/', async (req, res) => {
     // Agentic loop: keep calling Claude until no more tool_use
     let response = await anthropic.messages.create({
       model: MODEL,
-      max_tokens: 1024,
+      max_tokens: MAX_TOKENS,
+      output_config: { effort: EFFORT },
       cache_control: { type: 'ephemeral' },
       system,
       tools,
@@ -713,7 +836,8 @@ router.post('/', async (req, res) => {
 
       response = await anthropic.messages.create({
         model: MODEL,
-        max_tokens: 1024,
+        max_tokens: MAX_TOKENS,
+        output_config: { effort: EFFORT },
         cache_control: { type: 'ephemeral' },
         system,
         tools,
