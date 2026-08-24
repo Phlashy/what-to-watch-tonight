@@ -12,6 +12,13 @@ followed it — see `docs/AUDIT-OUTCOME.md` for the story and the result. Tiers
 
 ### Added
 
+- **The Ask assistant can see show progress and per-person ratings.** It now
+  knows each person's status for a show (wishlist / watching / finished /
+  dropped) — `get_title_details` includes it, and a new **`get_show_status`**
+  tool answers "what is Davin still watching?", "what have we finished?", etc.
+  It also surfaces how individuals rated a title when asked, while being told to
+  weight personal ratings lightly (they're a soft signal) and lean on critic
+  scores and watch history for recommendations.
 - **The Ask assistant is much better at finding something to watch.** Three
   changes: (1) `search_titles` can now filter to **unwatched** titles (no logged
   viewing) and **exclude genres** (e.g. "not animated"), on top of the existing
