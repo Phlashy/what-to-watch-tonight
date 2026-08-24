@@ -31,7 +31,7 @@ Deploys still go over SSH on the tailnet, so **the Mac** still needs Tailscale:
 - NordVPN must be OFF / paused while deploying — two VPNs can't both own the
   connection, and NordVPN on macOS has no split-tunnel. Nord is fine for
   streaming, just not at the same time as Tailscale. (This only affects
-  *deploying*; the family using the app is unaffected by any VPN.)
+  _deploying_; the family using the app is unaffected by any VPN.)
 
 ## How the public exposure is wired
 

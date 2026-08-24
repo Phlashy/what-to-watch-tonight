@@ -68,12 +68,12 @@ updates any instance without touching who it belongs to.
 
 What makes an instance distinct is entirely in its `.env`:
 
-| Var             | Purpose                                                                          |
-| --------------- | -------------------------------------------------------------------------------- |
-| `PORT`          | Its own port (each instance listens separately)                                  |
-| `DB_PATH`       | Its own database file, outside the repo                                          |
-| `WTWT_PM2_NAME` | The pm2 process name (`scripts/deploy.sh` reads this; defaults to `movie-night`) |
-| `APP_PASSWORD`  | **Required** if the instance is exposed publicly (see Security posture)          |
+| Var                 | Purpose                                                                                                                |
+| ------------------- | ---------------------------------------------------------------------------------------------------------------------- |
+| `PORT`              | Its own port (each instance listens separately)                                                                        |
+| `DB_PATH`           | Its own database file, outside the repo                                                                                |
+| `WTWT_PM2_NAME`     | The pm2 process name (`scripts/deploy.sh` reads this; defaults to `movie-night`)                                       |
+| `APP_PASSWORD`      | **Required** if the instance is exposed publicly (see Security posture)                                                |
 | `ANTHROPIC_API_KEY` | Omit it to disable the Ask tab — `/api/config` reports `chatEnabled: false` and the client hides the tab automatically |
 
 Seed a fresh instance's lists/titles with the generic, idempotent seeder:

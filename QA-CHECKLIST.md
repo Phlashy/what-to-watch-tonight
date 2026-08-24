@@ -10,7 +10,7 @@ UI behaviour, mobile UX, and cross-cutting flows that tests can't easily reach.
 > (see [DEPLOYMENT.md](docs/DEPLOYMENT.md#running-more-than-one-instance)). A
 > shared-code change is deployed to **every** instance, so after such a deploy,
 > run at least the **Smoke Test** and **§11 Instance Configuration** against
-> *each* instance's URL — not only the primary one. A change that looks fine on
+> _each_ instance's URL — not only the primary one. A change that looks fine on
 > the instance you develop against can still break another (e.g. one has the Ask
 > tab disabled, or a password gate the other lacks).
 
@@ -155,7 +155,7 @@ npm run build     # must complete with no errors (client/)
 ## 11. Instance Configuration (per instance, after a shared-code deploy)
 
 > Each instance is defined entirely by its `.env` + `family.config.json`. This
-> section confirms an instance is still *itself* after a shared-code deploy —
+> section confirms an instance is still _itself_ after a shared-code deploy —
 > run it against **each** instance's own URL.
 
 - [ ] The person picker shows **this instance's** family members, with their avatars
@@ -163,7 +163,7 @@ npm run build     # must complete with no errors (client/)
 - [ ] Lists/contexts match this instance's config
 - [ ] **Password gate:** on a password-protected instance, a fresh browser (or
       incognito) is challenged before any data loads, and the correct password unlocks it
-- [ ] **Ask tab:** present on instances *with* an Anthropic key; **absent** on
+- [ ] **Ask tab:** present on instances _with_ an Anthropic key; **absent** on
       instances without one (it should not appear-then-error)
 - [ ] No cross-contamination: data added here does not appear on the other instance
 

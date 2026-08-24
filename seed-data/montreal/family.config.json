@@ -4,9 +4,7 @@
     {
       "name": "Lauren",
       "role": "mom",
-      "aliases": [
-        "Lauren"
-      ],
+      "aliases": ["Lauren"],
       "color": "#ec4899",
       "avatar": {
         "bg": "#701a3d",
@@ -38,10 +36,7 @@
     {
       "name": "Matt",
       "role": "dad",
-      "aliases": [
-        "Matt",
-        "Matthew"
-      ],
+      "aliases": ["Matt", "Matthew"],
       "color": "#2563eb",
       "avatar": {
         "bg": "#1a365d",
@@ -73,10 +68,7 @@
     {
       "name": "Charlize",
       "role": "daughter",
-      "aliases": [
-        "Charlize",
-        "Char"
-      ],
+      "aliases": ["Charlize", "Char"],
       "color": "#9333ea",
       "avatar": {
         "bg": "#44337a",
@@ -108,10 +100,7 @@
     {
       "name": "Maverick",
       "role": "son",
-      "aliases": [
-        "Maverick",
-        "Mav"
-      ],
+      "aliases": ["Maverick", "Mav"],
       "color": "#16a34a",
       "avatar": {
         "bg": "#22543d",
@@ -142,39 +131,28 @@
     }
   ],
   "guests": [],
-  "rotation": [
-    "Maverick",
-    "Charlize",
-    "Lauren",
-    "Matt"
-  ],
+  "rotation": ["Maverick", "Charlize", "Lauren", "Matt"],
   "contexts": [
     {
       "id": "family",
       "label": "Family",
       "emoji": "👨‍👩‍👧‍👦",
       "subtitle": "Movie Night",
-      "lists": [
-        "family_to_watch"
-      ]
+      "lists": ["family_to_watch"]
     },
     {
       "id": "filmbuff",
       "label": "Film Buff",
       "emoji": "🎬",
       "subtitle": "Big-screen greats",
-      "lists": [
-        "film_buff"
-      ]
+      "lists": ["film_buff"]
     },
     {
       "id": "classics",
       "label": "Classics",
       "emoji": "📺",
       "subtitle": "Classic shows",
-      "lists": [
-        "show_classics"
-      ]
+      "lists": ["show_classics"]
     }
   ],
   "lists": [

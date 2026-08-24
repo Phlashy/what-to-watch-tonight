@@ -34,7 +34,7 @@ const insertList = db.prepare(
 );
 const getList = db.prepare('SELECT id FROM lists WHERE name = ?');
 const findTitle = db.prepare(
-  "SELECT id FROM titles WHERE lower(title) = lower(?) AND type = ? AND (year = ? OR year IS NULL OR ? IS NULL)"
+  'SELECT id FROM titles WHERE lower(title) = lower(?) AND type = ? AND (year = ? OR year IS NULL OR ? IS NULL)'
 );
 const insertTitle = db.prepare('INSERT INTO titles (title, type, year) VALUES (?, ?, ?)');
 const insertItem = db.prepare(

@@ -10,16 +10,16 @@ repo.)
 
 ## Quick Reference
 
-| Detail       | Value                                                                                |
-| ------------ | ------------------------------------------------------------------------------------ |
-| URL (home)   | `http://anguspi.local/movie-night/`                                                  |
+| Detail       | Value                                                                                                                                             |
+| ------------ | ------------------------------------------------------------------------------------------------------------------------------------------------- |
+| URL (home)   | `http://anguspi.local/movie-night/`                                                                                                               |
 | URL (remote) | `https://anguspi.tail485122.ts.net:8443/movie-night/` (**public** via Funnel, `APP_PASSWORD`-gated — see [REMOTE-ACCESS.md](../REMOTE-ACCESS.md)) |
-| Port         | 3001                                                                                 |
-| Pi directory | `~/what-to-watch-tonight/`                                                           |
-| Database     | `~/movie-night-data/movies.db`                                                       |
-| pm2 process  | `movie-night`                                                                        |
-| Nginx config | `/etc/nginx/sites-available/anguspi` (shared config, `location /movie-night/` block) |
-| GitHub       | https://github.com/Phlashy/what-to-watch-tonight                                     |
+| Port         | 3001                                                                                                                                              |
+| Pi directory | `~/what-to-watch-tonight/`                                                                                                                        |
+| Database     | `~/movie-night-data/movies.db`                                                                                                                    |
+| pm2 process  | `movie-night`                                                                                                                                     |
+| Nginx config | `/etc/nginx/sites-available/anguspi` (shared config, `location /movie-night/` block)                                                              |
+| GitHub       | https://github.com/Phlashy/what-to-watch-tonight                                                                                                  |
 
 > **This runbook covers the primary (Casey) instance.** A second, independent
 > instance runs on the same Pi for another family — different checkout, port,
@@ -27,7 +27,7 @@ repo.)
 > runbook is **`docs/MONTREAL-INSTANCE.md`** (kept private — maintainer's local
 > copy, not committed). The generic mechanism is in
 > [DEPLOYMENT.md](./DEPLOYMENT.md#running-more-than-one-instance).
-> When you change **shared code**, deploy to *both* checkouts (see below).
+> When you change **shared code**, deploy to _both_ checkouts (see below).
 
 ---
 
