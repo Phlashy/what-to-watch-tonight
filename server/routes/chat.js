@@ -43,6 +43,8 @@ CRITICAL RULES:
 - "unwatched" only means there's no logged viewing — say "no record of watching", never "you've never seen". If the user says they've actually seen one, just drop it.
 - For open-ended "what should we watch" / "pick us something" (no hard filters), prefer suggest_watchlist — it draws from the family's own lists and defaults to unwatched. Apply whatever filters they do give (runtime, family-friendly, not-animated).
 - Report the relevant score / runtime / certificate you filtered or sorted by so the user can choose.
+- SHOWS have a per-person status: wishlist / watching / finished / dropped. get_title_details includes show_status (who is at what stage for that show); get_show_status finds shows across the library by status and/or person — use it for "what is Davin still watching?", "what have we finished?", "anything we dropped?", "what's on our wishlist?".
+- PER-PERSON RATINGS are in get_title_details (each viewing lists every attendee and their rating). Use them when asked how someone — or everyone — rated a title. But weight them LIGHTLY as a signal: Davin tends to rate almost everything ~10, and Nupur rarely rates at all, so a high Davin score or a missing Nupur score means little. Prefer critic scores (Rotten Tomatoes / IMDb) and actual watch history when deciding what to recommend; bring up personal ratings mainly when the user asks about them.
 - If a search returns results, report ALL of them, not just some.
 - If a search returns no results, say "I couldn't find any in the database" — never make claims about what exists or doesn't exist without checking.
 - For "which director/genre have we watched the most" or similar aggregate/ranking questions, ALWAYS use get_top_directors or get_top_genres. These tools do the counting for you — never try to count from raw viewing data.
@@ -168,13 +170,31 @@ const tools = [
   {
     name: 'get_title_details',
     description:
-      'Get full details for a specific title by ID, including all viewings with per-person ratings, list memberships, and collection info.',
+      "Get full details for a specific title by ID: every viewing with each person's rating, per-person show progress (show_status: who has it on their wishlist / is watching / finished / dropped), list memberships, and collection info.",
     input_schema: {
       type: 'object',
       properties: {
         title_id: { type: 'number', description: 'The title ID' },
       },
       required: ['title_id'],
+    },
+  },
+  {
+    name: 'get_show_status',
+    description:
+      'Find shows by each person\'s progress. Returns one row per person per show. Use for "what is Davin still watching?", "what have we finished?", "anything we dropped?", or "what\'s on our wishlist?". Filter by person and/or status.',
+    input_schema: {
+      type: 'object',
+      properties: {
+        person: { type: 'string', description: 'Filter to one person' },
+        status: {
+          type: 'string',
+          enum: ['wishlist', 'watching', 'finished', 'dropped'],
+          description: 'Filter to one status',
+        },
+        limit: { type: 'number', description: 'Max rows (default 30, max 100)' },
+      },
+      required: [],
     },
   },
   {
@@ -490,6 +510,12 @@ function toolGetTitleDetails(db, { title_id }) {
   const collection = db
     .prepare('SELECT format, platform, notes FROM collection WHERE title_id = ?')
     .all(title_id);
+  // Per-person show progress (wishlist / watching / finished / dropped).
+  const showStatus = db
+    .prepare(
+      'SELECT person, status, started_date, ended_date FROM show_status WHERE title_id = ? ORDER BY person'
+    )
+    .all(title_id);
   // Strip fields the LLM doesn't need to keep token count down
   return {
     id: title.id,
@@ -506,9 +532,30 @@ function toolGetTitleDetails(db, { title_id }) {
     synopsis: title.synopsis,
     cast: title.cast,
     viewings,
+    show_status: showStatus,
     listMemberships,
     collection,
   };
+}
+
+// Find shows by their per-person progress. Answers "what is Davin still
+// watching?", "what have we finished?", "anything dropped?". Each row is one
+// person's status for one show.
+function toolGetShowStatus(db, { person, status, limit = 30 }) {
+  let sql = `SELECT ss.title_id, t.title, t.year, ss.person, ss.status, ss.started_date, ss.ended_date
+    FROM show_status ss JOIN titles t ON ss.title_id = t.id WHERE 1=1`;
+  const params = [];
+  if (person) {
+    sql += ' AND ss.person = ?';
+    params.push(person);
+  }
+  if (status) {
+    sql += ' AND ss.status = ?';
+    params.push(status);
+  }
+  sql += ' ORDER BY t.title ASC, ss.person ASC LIMIT ?';
+  params.push(Math.min(limit, 100));
+  return db.prepare(sql).all(...params);
 }
 
 function toolGetViewingHistory(db, { person, from_date, to_date, search, sort, limit = 20 }) {
@@ -744,6 +791,8 @@ function executeToolCall(db, name, input, config) {
         return toolSuggestWatchlist(db, input);
       case 'get_title_details':
         return toolGetTitleDetails(db, input);
+      case 'get_show_status':
+        return toolGetShowStatus(db, input);
       case 'get_viewing_history':
         return toolGetViewingHistory(db, input);
       case 'get_list_items':

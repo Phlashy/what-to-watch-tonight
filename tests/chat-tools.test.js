@@ -40,6 +40,14 @@ describe('chat assistant tools', () => {
 
     // Legacy shape: a group rating on the viewing, no per-person rows.
     addViewing(ids.titles.breakingBad, '2025-12-01', 5);
+
+    // Per-person show progress for Breaking Bad (a show).
+    const addStatus = db.prepare(
+      'INSERT INTO show_status (title_id, person, status) VALUES (?, ?, ?)'
+    );
+    addStatus.run(ids.titles.breakingBad, 'Gordon', 'finished');
+    addStatus.run(ids.titles.breakingBad, 'Davin', 'watching');
+    addStatus.run(ids.titles.breakingBad, 'Nupur', 'dropped');
   });
 
   describe('search_titles', () => {
@@ -270,6 +278,35 @@ describe('chat assistant tools', () => {
       assert.deepEqual(call('get_title_details', { title_id: 999999 }), {
         error: 'Title not found',
       });
+    });
+
+    it('includes per-person show status', () => {
+      const details = call('get_title_details', { title_id: ids.titles.breakingBad });
+      const byPerson = Object.fromEntries(details.show_status.map((s) => [s.person, s.status]));
+      assert.deepEqual(byPerson, { Gordon: 'finished', Davin: 'watching', Nupur: 'dropped' });
+    });
+  });
+
+  describe('get_show_status', () => {
+    it('filters by status', () => {
+      const watching = call('get_show_status', { status: 'watching' });
+      assert.deepEqual(
+        watching.map((r) => [r.title, r.person]),
+        [['Breaking Bad', 'Davin']]
+      );
+    });
+
+    it('filters by person', () => {
+      const gordon = call('get_show_status', { person: 'Gordon' });
+      assert.deepEqual(
+        gordon.map((r) => r.status),
+        ['finished']
+      );
+    });
+
+    it('filters by person and status together', () => {
+      assert.equal(call('get_show_status', { person: 'Davin', status: 'watching' }).length, 1);
+      assert.equal(call('get_show_status', { person: 'Davin', status: 'finished' }).length, 0);
     });
   });
 
