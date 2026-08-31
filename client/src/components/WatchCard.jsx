@@ -42,7 +42,7 @@ export default function WatchCard({
   const myProviders = (() => {
     const wp = parseJSON(item.watch_providers, null);
     if (!wp) return [];
-    const all = [...(wp.flatrate || []), ...(wp.free || [])];
+    const all = [...(wp.flatrate || []), ...(wp.free || []), ...(wp.ads || [])];
     const unique = [...new Map(all.map((p) => [p.provider_id, p])).values()];
     return unique.filter((p) => MY_SERVICE_IDS.has(p.provider_id));
   })();
