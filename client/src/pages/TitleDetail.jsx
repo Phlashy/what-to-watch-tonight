@@ -613,6 +613,7 @@ export default function TitleDetail() {
                     const stream = [
                       ...(watchProviders.flatrate || []),
                       ...(watchProviders.free || []),
+                      ...(watchProviders.ads || []),
                     ];
                     const rentBuy = [...(watchProviders.rent || []), ...(watchProviders.buy || [])];
                     // Deduplicate by provider_id
