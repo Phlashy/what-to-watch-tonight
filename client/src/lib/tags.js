@@ -42,3 +42,20 @@ const TAG_LABELS = {
 export function tagLabel(tag) {
   return TAG_LABELS[tag] || String(tag).replace(/_/g, ' ');
 }
+
+/**
+ * Turn free-text a user typed into a stored tag key — lowercase, spaces to
+ * underscores, punctuation dropped — so ad-hoc tags match the COMMON_TAGS shape
+ * and don't fragment on casing or spacing ("VIFF 2026" → "viff_2026").
+ * @param {string} input
+ * @returns {string} normalised key, or '' if nothing usable remained
+ */
+export function normalizeTag(input) {
+  return String(input || '')
+    .trim()
+    .toLowerCase()
+    .replace(/\s+/g, '_')
+    .replace(/[^a-z0-9_]/g, '')
+    .replace(/_+/g, '_')
+    .replace(/^_|_$/g, '');
+}

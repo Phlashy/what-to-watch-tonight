@@ -3,6 +3,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import { api } from '../api';
 import { addTitleFromTmdb } from '../lib/tmdb';
 import { useFromState } from '../lib/useFromState';
+import ManualAddTitle from '../components/ManualAddTitle';
 import { parseJSON } from '../utils';
 
 function SearchResult({ t }) {
@@ -168,6 +169,7 @@ export default function Search() {
   const [tmdbLoading, setTmdbLoading] = useState(false);
   const [adding, setAdding] = useState(null);
   const [totalTitles, setTotalTitles] = useState(null);
+  const [manualAdd, setManualAdd] = useState(false);
   const inputRef = useRef(null);
   const navigate = useNavigate();
   const fromState = useFromState();
@@ -360,13 +362,36 @@ export default function Search() {
         )}
 
         {nothingFound && (
-          <div className="text-center py-16 text-slate-500">
+          <div className="text-center pt-16 pb-4 text-slate-500">
             <p className="text-sm">
               No results for <span className="text-slate-300">"{query}"</span>
             </p>
           </div>
         )}
+
+        {/* Add a title the search can't find (e.g. a festival short not on TMDB). */}
+        {searching && !loading && !tmdbLoading && (
+          <div className="text-center py-4">
+            <button
+              onClick={() => setManualAdd(true)}
+              className="text-xs font-medium text-amber-400 hover:text-amber-300"
+            >
+              Can't find it? Add it manually or paste a link →
+            </button>
+          </div>
+        )}
       </div>
+
+      {manualAdd && (
+        <ManualAddTitle
+          initialTitle={query}
+          onClose={() => setManualAdd(false)}
+          onAdded={(id) => {
+            setManualAdd(false);
+            navigate(`/title/${id}`, { state: fromState });
+          }}
+        />
+      )}
     </div>
   );
 }

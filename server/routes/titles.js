@@ -101,11 +101,13 @@ router.post('/', (req, res) => {
     title,
     type = 'movie',
     tmdb_id,
+    imdb_id,
     year,
     director,
     cast,
     genre,
     runtime_minutes,
+    content_rating,
     poster_url,
     synopsis,
   } = req.body;
@@ -124,8 +126,8 @@ router.post('/', (req, res) => {
     result = db
       .prepare(
         `
-    INSERT INTO titles (title, title_raw, type, tmdb_id, year, director, cast, genre, runtime_minutes, poster_url, synopsis)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    INSERT INTO titles (title, title_raw, type, tmdb_id, imdb_id, year, director, cast, genre, runtime_minutes, content_rating, poster_url, synopsis)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
   `
       )
       .run(
@@ -133,11 +135,13 @@ router.post('/', (req, res) => {
         title,
         type,
         tmdb_id || null,
+        imdb_id || null,
         year || null,
         director || null,
         cast ? JSON.stringify(cast) : null,
         genre ? JSON.stringify(genre) : null,
         runtime_minutes || null,
+        content_rating || null,
         poster_url || null,
         synopsis || null
       );

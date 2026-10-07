@@ -4,7 +4,7 @@ import { usePerson } from '../context/PersonContext';
 import { useFamily } from '../context/FamilyContext';
 import { useOnEscape } from '../lib/a11y';
 import { findOrCreateTitleFromTmdb } from '../lib/tmdb';
-import { COMMON_TAGS, tagLabel } from '../lib/tags';
+import { COMMON_TAGS, tagLabel, normalizeTag } from '../lib/tags';
 
 // Today's date as YYYY-MM-DD in the *viewer's* timezone. NOT new Date().toISOString()
 // — that's UTC, which rolls over to "tomorrow" on Pacific-evening logs.
@@ -37,6 +37,7 @@ export default function LogViewing({
         : [],
   }));
   const [saving, setSaving] = useState(false);
+  const [customTag, setCustomTag] = useState('');
   const [searchQuery, setSearchQuery] = useState(titleName || '');
   const [searchResults, setSearchResults] = useState([]);
   const [tmdbResults, setTmdbResults] = useState([]);
@@ -92,6 +93,16 @@ export default function LogViewing({
       }
       return { ...f, tags: adding ? [...f.tags, tag] : f.tags.filter((t) => t !== tag) };
     });
+  }
+
+  // Add a tag the user typed (normalised). family_movie_night has its own toggle,
+  // so it's never created this way.
+  function addCustomTag() {
+    const tag = normalizeTag(customTag);
+    if (tag && tag !== 'family_movie_night' && !form.tags.includes(tag)) {
+      setForm((f) => ({ ...f, tags: [...f.tags, tag] }));
+    }
+    setCustomTag('');
   }
 
   function togglePerson(person) {
@@ -457,7 +468,13 @@ export default function LogViewing({
           <div className="mb-4">
             <label className="text-xs text-slate-400 font-medium mb-1 block">Tags</label>
             <div className="flex flex-wrap gap-2">
-              {COMMON_TAGS.map((t) => (
+              {/* Suggested tags, plus any custom ones already picked (so a typed
+                  tag shows as a removable chip too). family_movie_night has its
+                  own toggle above, so exclude it here. */}
+              {[
+                ...COMMON_TAGS,
+                ...form.tags.filter((t) => t !== 'family_movie_night' && !COMMON_TAGS.includes(t)),
+              ].map((t) => (
                 <button
                   key={t}
                   onClick={() => toggleTag(t)}
@@ -466,6 +483,29 @@ export default function LogViewing({
                   {tagLabel(t)}
                 </button>
               ))}
+            </div>
+            {/* Free-text: add a tag that isn't in the suggested list. */}
+            <div className="flex gap-2 mt-2">
+              <input
+                value={customTag}
+                onChange={(e) => setCustomTag(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') {
+                    e.preventDefault();
+                    addCustomTag();
+                  }
+                }}
+                placeholder="Add your own tag…"
+                className="flex-1 bg-slate-800 rounded-lg px-3 py-1.5 text-xs outline-none focus:ring-2 ring-amber-500"
+              />
+              <button
+                type="button"
+                onClick={addCustomTag}
+                disabled={!normalizeTag(customTag)}
+                className="px-3 py-1.5 rounded-lg text-xs font-semibold bg-slate-700 text-slate-200 hover:bg-slate-600 disabled:opacity-40"
+              >
+                Add
+              </button>
             </div>
           </div>
 

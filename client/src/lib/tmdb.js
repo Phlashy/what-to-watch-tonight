@@ -51,3 +51,34 @@ export async function addTitleFromTmdb(tmdbItem) {
   const title = await findOrCreateTitleFromTmdb(tmdbItem);
   return title.id;
 }
+
+/**
+ * Resolve a pasted TMDB or IMDb link/id via the server. Returns
+ * `{ found, tmdb_id?, media_type?, title?, year?, imdb_id? }`. `found: false`
+ * means it isn't on TMDB (common for brand-new festival shorts) — fall back to
+ * manual entry, keeping any `imdb_id` it echoes back for a later ratings pull.
+ * @param {string} q a TMDB/IMDb URL or a bare IMDb tt… id
+ */
+export async function resolveTitleRef(q) {
+  const res = await api(`/api/tmdb/resolve?q=${encodeURIComponent(q)}`);
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) throw new Error(data.error || "Couldn't read that link");
+  return data;
+}
+
+/**
+ * Create a title from hand-entered fields (for titles no API knows about).
+ * The server stores whatever is provided; only `title` is required.
+ * @param {object} fields title, type, year, runtime_minutes, genre[], content_rating, imdb_id, poster_url, synopsis
+ * @returns {Promise<object>} the created title row
+ */
+export async function createManualTitle(fields) {
+  const res = await api('/api/titles', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(fields),
+  });
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) throw new Error(data.error || "Couldn't add that title");
+  return data;
+}

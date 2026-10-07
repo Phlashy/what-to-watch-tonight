@@ -41,6 +41,26 @@ describe('Titles API', () => {
       const res = await request(app).post('/api/titles').send({ title: 'Untyped' });
       assert.equal(res.body.type, 'movie');
     });
+
+    it('stores a manually-added title with content_rating and imdb_id', async () => {
+      const res = await request(app)
+        .post('/api/titles')
+        .send({
+          title: 'A VIFF Short',
+          type: 'movie',
+          year: 2026,
+          runtime_minutes: 14,
+          genre: ['Short', 'Drama'],
+          content_rating: 'NR',
+          imdb_id: 'tt41429881',
+          synopsis: 'A short seen at the festival.',
+        });
+      assert.equal(res.status, 200);
+      assert.equal(res.body.content_rating, 'NR');
+      assert.equal(res.body.imdb_id, 'tt41429881');
+      assert.equal(res.body.runtime_minutes, 14);
+      assert.equal(JSON.parse(res.body.genre)[0], 'Short');
+    });
   });
 
   describe('GET /api/titles', () => {

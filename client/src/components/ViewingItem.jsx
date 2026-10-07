@@ -2,13 +2,14 @@ import { useState } from 'react';
 import { api } from '../api';
 import { useFamily } from '../context/FamilyContext';
 import { parseJSON } from '../utils';
-import { tagLabel } from '../lib/tags';
+import { COMMON_TAGS, tagLabel, normalizeTag } from '../lib/tags';
 
 /** A single viewing on the title detail page: shows it, and edits it inline. */
 export default function ViewingItem({ v, onDelete, onSaved }) {
   const { allPeople: PEOPLE, memberNames } = useFamily();
   const [editing, setEditing] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [customTag, setCustomTag] = useState('');
 
   const parsedPeople = parseJSON(v.people);
   const watcherNames = parsedPeople.map((p) => p.person);
@@ -188,7 +189,13 @@ export default function ViewingItem({ v, onDelete, onSaved }) {
             Tags
           </label>
           <div className="flex flex-wrap gap-2 mt-1.5">
-            {['family_movie_night', 'solo', 'cinema', 'plane', 'mubi', 'unfinished'].map((tag) => (
+            {/* family_movie_night first (special), then the suggested tags, then
+                any custom tags already on this viewing so they're removable. */}
+            {[
+              'family_movie_night',
+              ...COMMON_TAGS,
+              ...draft.tags.filter((t) => t !== 'family_movie_night' && !COMMON_TAGS.includes(t)),
+            ].map((tag) => (
               <button
                 key={tag}
                 onClick={() =>
@@ -208,6 +215,38 @@ export default function ViewingItem({ v, onDelete, onSaved }) {
                 {tagLabel(tag)}
               </button>
             ))}
+          </div>
+          <div className="flex gap-2 mt-2">
+            <input
+              value={customTag}
+              onChange={(e) => setCustomTag(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') {
+                  e.preventDefault();
+                  const tag = normalizeTag(customTag);
+                  if (tag && tag !== 'family_movie_night' && !draft.tags.includes(tag)) {
+                    setDraft((d) => ({ ...d, tags: [...d.tags, tag] }));
+                  }
+                  setCustomTag('');
+                }
+              }}
+              placeholder="Add your own tag…"
+              className="flex-1 bg-slate-700 rounded-lg px-3 py-1.5 text-xs outline-none focus:ring-2 ring-amber-500"
+            />
+            <button
+              type="button"
+              onClick={() => {
+                const tag = normalizeTag(customTag);
+                if (tag && tag !== 'family_movie_night' && !draft.tags.includes(tag)) {
+                  setDraft((d) => ({ ...d, tags: [...d.tags, tag] }));
+                }
+                setCustomTag('');
+              }}
+              disabled={!normalizeTag(customTag)}
+              className="px-3 py-1.5 rounded-lg text-xs font-semibold bg-slate-600 text-slate-200 hover:bg-slate-500 disabled:opacity-40"
+            >
+              Add
+            </button>
           </div>
         </div>
 
