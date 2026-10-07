@@ -56,6 +56,63 @@ router.get('/search', async (req, res, next) => {
   }
 });
 
+// Parse a pasted reference into either a TMDB (movie|tv + id) or an IMDb id.
+// Accepts full URLs or bare ids. Returns null if it recognises neither.
+function parseTitleRef(input) {
+  const s = String(input || '').trim();
+  const imdb = s.match(/\b(tt\d{6,})\b/i);
+  if (imdb) return { kind: 'imdb', imdb_id: imdb[1].toLowerCase() };
+  const tmdb = s.match(/themoviedb\.org\/(movie|tv)\/(\d+)/i);
+  if (tmdb) return { kind: 'tmdb', media_type: tmdb[1].toLowerCase(), tmdb_id: Number(tmdb[2]) };
+  return null;
+}
+
+// GET /api/tmdb/resolve?q=<a TMDB or IMDb link, or a bare IMDb tt… id>
+//
+// Turns a pasted link into something the add flow can use. A TMDB link is read
+// directly; an IMDb id is run through TMDB's /find. Many brand-new or niche
+// titles (e.g. festival shorts) aren't on TMDB at all — then we return
+// found:false so the client can fall back to manual entry, echoing the imdb_id
+// so it can still be stored for a later ratings backfill.
+router.get('/resolve', async (req, res, next) => {
+  const ref = parseTitleRef(req.query.q);
+  if (!ref) {
+    return res.status(400).json({ error: 'Paste a TMDB or IMDb link (or an IMDb tt… id).' });
+  }
+  try {
+    if (ref.kind === 'tmdb') {
+      const r = await fetchTmdb(`${TMDB_BASE}/${ref.media_type}/${ref.tmdb_id}?api_key=${API_KEY}`);
+      if (!r.ok) return res.json({ found: false });
+      const d = await r.json();
+      return res.json({
+        found: true,
+        tmdb_id: ref.tmdb_id,
+        media_type: ref.media_type,
+        title: d.title || d.name,
+        year: (d.release_date || d.first_air_date || '').slice(0, 4) || null,
+      });
+    }
+    const r = await fetchTmdb(
+      `${TMDB_BASE}/find/${ref.imdb_id}?api_key=${API_KEY}&external_source=imdb_id`
+    );
+    const d = await r.json();
+    const movie = (d.movie_results || [])[0];
+    const tv = (d.tv_results || [])[0];
+    const hit = movie ? { ...movie, media_type: 'movie' } : tv ? { ...tv, media_type: 'tv' } : null;
+    if (!hit) return res.json({ found: false, imdb_id: ref.imdb_id });
+    return res.json({
+      found: true,
+      tmdb_id: hit.id,
+      media_type: hit.media_type,
+      title: hit.title || hit.name,
+      year: (hit.release_date || hit.first_air_date || '').slice(0, 4) || null,
+      imdb_id: ref.imdb_id,
+    });
+  } catch (e) {
+    next(e);
+  }
+});
+
 // GET /api/tmdb/movie/:id
 router.get('/movie/:id', async (req, res, next) => {
   const url = `${TMDB_BASE}/movie/${req.params.id}?api_key=${API_KEY}&append_to_response=credits`;
@@ -242,3 +299,4 @@ router.get('/watch-providers/:titleId', async (req, res, next) => {
 });
 
 module.exports = router;
+module.exports.parseTitleRef = parseTitleRef;

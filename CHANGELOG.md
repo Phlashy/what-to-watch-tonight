@@ -12,6 +12,19 @@ followed it — see `docs/AUDIT-OUTCOME.md` for the story and the result. Tiers
 
 ### Added
 
+- **Add titles the search can't find.** A "Can't find it? Add it manually or
+  paste a link" option on the Search tab opens a form that (a) takes a pasted
+  **TMDB or IMDb link** — if it's on TMDB it's added and enriched like a search
+  result, and (b) otherwise lets you **type the details** (title, year, type,
+  runtime, genres, age rating, poster URL, synopsis) for titles no API knows yet
+  (e.g. festival shorts). An IMDb id is kept so ratings can backfill later.
+  (`GET /api/tmdb/resolve`; `POST /api/titles` now also stores `content_rating`
+  and `imdb_id`.)
+- **Add your own tags when logging.** The Log-a-viewing and edit-viewing forms
+  now have a free-text box to add any tag on the fly (normalised to the
+  `lowercase_with_underscores` shape), alongside the suggested chips — no code
+  change needed for a one-off tag. The edit form's tag list now also matches the
+  full suggested set.
 - **The Ask assistant can see show progress and per-person ratings.** It now
   knows each person's status for a show (wishlist / watching / finished /
   dropped) — `get_title_details` includes it, and a new **`get_show_status`**
