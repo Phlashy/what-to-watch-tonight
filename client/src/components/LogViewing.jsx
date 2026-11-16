@@ -37,6 +37,7 @@ export default function LogViewing({
         : [],
   }));
   const [saving, setSaving] = useState(false);
+  const [saveError, setSaveError] = useState('');
   const [customTag, setCustomTag] = useState('');
   const [searchQuery, setSearchQuery] = useState(titleName || '');
   const [searchResults, setSearchResults] = useState([]);
@@ -134,8 +135,9 @@ export default function LogViewing({
   async function handleSave() {
     if (!selectedTitleId) return;
     setSaving(true);
+    setSaveError('');
     try {
-      const res = await api('/api/viewings', {
+      await api('/api/viewings', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -153,10 +155,12 @@ export default function LogViewing({
           picked_by: pickedBy.length > 0 ? pickedBy.join(',') : currentPerson || null,
         }),
       });
-      if (res.ok) {
-        onSaved?.();
-        onClose();
-      }
+      onSaved?.();
+      onClose();
+    } catch (e) {
+      // api() throws on non-OK; without this the modal just stopped spinning and
+      // the user couldn't tell whether the viewing actually saved.
+      setSaveError(e.message || 'Could not save the viewing. Please try again.');
     } finally {
       setSaving(false);
     }
@@ -521,6 +525,7 @@ export default function LogViewing({
             />
           </div>
 
+          {saveError && <p className="text-sm text-red-400 mb-2">{saveError}</p>}
           <button
             onClick={handleSave}
             disabled={!selectedTitleId || saving}

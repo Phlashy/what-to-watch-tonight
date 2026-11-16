@@ -1,7 +1,7 @@
 const { describe, it, before, beforeEach } = require('node:test');
 const assert = require('node:assert/strict');
 const request = require('supertest');
-const { createTestDb, seedTestData, createTestApp } = require('./helpers');
+const { createTestDb, seedTestData, createTestApp, TEST_CONFIG } = require('./helpers');
 
 // Integration tests — exercise the REAL show-status routes (server/routes/show-status.js),
 // including the gated auto-remove-from-lists behavior.
@@ -91,6 +91,45 @@ describe('Show Status API', () => {
         .post('/api/show-status')
         .send({ title_id: ids.titles.breakingBad, person: 'Davin', status: 'finished' });
       assert.equal(onAnyList(ids.titles.breakingBad), false);
+    });
+  });
+
+  describe('keepLists — curated lists are never auto-pruned (BE-1)', () => {
+    // A separate app whose config marks 'with_nupur' as a curated "keep" list.
+    let keepApp;
+    before(() => {
+      keepApp = createTestApp(db, { ...TEST_CONFIG, keepLists: ['with_nupur'] });
+    });
+
+    beforeEach(() => {
+      // Breaking Bad also sits on the keep list (the suite beforeEach already put it on solo).
+      db.prepare(
+        'INSERT OR IGNORE INTO list_items (list_id, title_id, priority) VALUES (?, ?, 1)'
+      ).run(ids.lists.nupur, ids.titles.breakingBad);
+    });
+
+    const onList = (titleId, listId) =>
+      !!db
+        .prepare('SELECT 1 FROM list_items WHERE title_id = ? AND list_id = ?')
+        .get(titleId, listId);
+
+    it('prunes a normal to-watch list but keeps the curated one', async () => {
+      assert.ok(onList(ids.titles.breakingBad, ids.lists.solo), 'starts on the to-watch list');
+      assert.ok(onList(ids.titles.breakingBad, ids.lists.nupur), 'starts on the keep list');
+
+      await request(keepApp)
+        .post('/api/show-status')
+        .send({ title_id: ids.titles.breakingBad, person: 'Gordon', status: 'finished' });
+
+      assert.equal(
+        onList(ids.titles.breakingBad, ids.lists.solo),
+        false,
+        'pruned from the to-watch list'
+      );
+      assert.ok(
+        onList(ids.titles.breakingBad, ids.lists.nupur),
+        'kept on the curated keepLists list'
+      );
     });
   });
 

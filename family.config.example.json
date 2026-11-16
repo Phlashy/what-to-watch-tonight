@@ -76,6 +76,7 @@
     { "name": "solo", "displayName": "Solo", "description": "Solo viewing" },
     { "name": "christmas", "displayName": "Christmas", "description": "Holiday movies" }
   ],
+  "keepLists": ["christmas"],
   "streamingServiceIds": [8, 119, 337, 350],
   "watchProvidersRegion": "US"
 }

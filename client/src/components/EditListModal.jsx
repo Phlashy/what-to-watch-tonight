@@ -46,7 +46,7 @@ export default function EditListModal({ list, onClose, onSaved }) {
     setSaving(true);
     setError('');
     try {
-      const res = await api(`/api/lists/${list.name}`, {
+      await api(`/api/lists/${list.name}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -55,13 +55,11 @@ export default function EditListModal({ list, onClose, onSaved }) {
           icon: icon || null,
         }),
       });
-      if (res.ok) {
-        onSaved();
-        onClose();
-      } else {
-        const err = await res.json();
-        setError(err.error || 'Failed to save');
-      }
+      onSaved();
+      onClose();
+    } catch (e) {
+      // api() throws on non-OK (e.g. a rename conflict) — show the message.
+      setError(e.message || 'Failed to save');
     } finally {
       setSaving(false);
     }

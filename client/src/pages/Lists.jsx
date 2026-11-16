@@ -71,7 +71,7 @@ export default function Lists() {
     setCreating(true);
     setCreateError('');
     try {
-      const res = await api('/api/lists', {
+      await api('/api/lists', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -80,14 +80,13 @@ export default function Lists() {
           description: createForm.description.trim() || null,
         }),
       });
-      if (res.ok) {
-        setShowCreate(false);
-        setCreateForm({ display_name: '', description: '' });
-        loadLists();
-      } else {
-        const err = await res.json();
-        setCreateError(err.error || 'Failed to create list');
-      }
+      setShowCreate(false);
+      setCreateForm({ display_name: '', description: '' });
+      loadLists();
+    } catch (e) {
+      // api() throws on a non-OK response (e.g. 409 duplicate name) with the
+      // server's message on e.message — surface it instead of failing silently.
+      setCreateError(e.message || 'Failed to create list');
     } finally {
       setCreating(false);
     }

@@ -13,6 +13,7 @@ export default function AddToListSheet({ titleId, currentMemberships, onClose, o
   const [adding, setAdding] = useState(null);
   const [added, setAdded] = useState(new Set((currentMemberships || []).map((l) => l.name)));
   const [removing, setRemoving] = useState(null);
+  const [error, setError] = useState('');
   const [pickedBy, setPickedBy] = useState(currentPerson ? [currentPerson] : []);
 
   // Build a map of list name -> list_item_id for removal
@@ -28,8 +29,9 @@ export default function AddToListSheet({ titleId, currentMemberships, onClose, o
 
   async function addToList(listName) {
     setAdding(listName);
+    setError('');
     try {
-      const res = await api(`/api/lists/${listName}/items`, {
+      await api(`/api/lists/${listName}/items`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -37,9 +39,16 @@ export default function AddToListSheet({ titleId, currentMemberships, onClose, o
           added_by: pickedBy.length > 0 ? pickedBy.join(',') : currentPerson || null,
         }),
       });
-      if (res.ok || res.status === 409) {
+      setAdded((s) => new Set([...s, listName]));
+      onAdded?.();
+    } catch (e) {
+      // 409 means it's already on the list — the end state we wanted, so treat it
+      // as success. Any other failure is real: surface it instead of swallowing it.
+      if (e.status === 409) {
         setAdded((s) => new Set([...s, listName]));
         onAdded?.();
+      } else {
+        setError(e.message || 'Could not add to the list.');
       }
     } finally {
       setAdding(null);
@@ -119,6 +128,7 @@ export default function AddToListSheet({ titleId, currentMemberships, onClose, o
               })}
             </div>
           </div>
+          {error && <p className="text-xs text-red-400 mb-3">{error}</p>}
           <div className="space-y-2">
             {lists.map((list) => {
               const isOn = added.has(list.name);

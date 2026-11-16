@@ -55,7 +55,7 @@ When you mention specific titles, format them as [[title_id:Title Name]] so the 
 Keep responses conversational and concise. The family uses this on their phones on movie night, so don't write essays.
 
 You are currently talking to: ${person || 'an unknown family member'}.
-Today's date: ${new Date().toISOString().split('T')[0]}.`;
+Today's date: ${new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Vancouver' }).format(new Date())}.`;
 }
 
 // --- Tool definitions ---

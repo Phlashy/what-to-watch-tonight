@@ -39,8 +39,22 @@ router.post('/', (req, res) => {
 
   // Auto-remove from to-watch lists only once nobody is still wishlist/watching,
   // so one person finishing/dropping doesn't empty shared lists for everyone else.
+  // `keepLists` (family.config.json) names curated / reference lists — a "best of"
+  // project, a themed collection, a classic-shows list — that a finished show must
+  // NOT be pruned from; only active to-watch lists get cleared. Unset => prune every
+  // list (legacy behaviour, kept for back-compat).
   if ((status === 'finished' || status === 'dropped') && noOneStillEngaged(db, title_id)) {
-    db.prepare('DELETE FROM list_items WHERE title_id = ?').run(title_id);
+    const keepLists = (req.app.locals.familyConfig && req.app.locals.familyConfig.keepLists) || [];
+    if (keepLists.length) {
+      const placeholders = keepLists.map(() => '?').join(', ');
+      db.prepare(
+        `DELETE FROM list_items
+         WHERE title_id = ?
+           AND list_id NOT IN (SELECT id FROM lists WHERE name IN (${placeholders}))`
+      ).run(title_id, ...keepLists);
+    } else {
+      db.prepare('DELETE FROM list_items WHERE title_id = ?').run(title_id);
+    }
   }
 
   const statuses = db.prepare('SELECT * FROM show_status WHERE title_id = ?').all(title_id);

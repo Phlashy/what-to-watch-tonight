@@ -156,7 +156,7 @@ export default function TitleDetail() {
   async function addToCollection(format, platform, notes) {
     setAddingToCollection(true);
     try {
-      const res = await api('/api/collection', {
+      await api('/api/collection', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -166,16 +166,19 @@ export default function TitleDetail() {
           notes: notes || null,
         }),
       });
-      if (res.ok) {
-        setShowAddToCollection(false);
-        loadTitle();
-      } else if (res.status === 409) {
-        await confirm({
-          message: `This title already has a ${format === 'bluray' ? 'Blu-ray' : format.toUpperCase()} entry in the collection.`,
-          confirmLabel: 'OK',
-          cancelLabel: null,
-        });
-      }
+      setShowAddToCollection(false);
+      loadTitle();
+    } catch (e) {
+      // api() throws on non-OK; show the duplicate-format message on 409, and the
+      // server's error otherwise, instead of the spinner just stopping silently.
+      await confirm({
+        message:
+          e.status === 409
+            ? `This title already has a ${format === 'bluray' ? 'Blu-ray' : format.toUpperCase()} entry in the collection.`
+            : e.message || 'Could not add to the collection.',
+        confirmLabel: 'OK',
+        cancelLabel: null,
+      });
     } finally {
       setAddingToCollection(false);
     }

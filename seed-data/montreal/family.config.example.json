@@ -69,6 +69,7 @@
       "description": "Series that earned their reputation"
     }
   ],
+  "keepLists": ["film_buff", "show_classics"],
   "streamingServiceIds": [8, 1796, 119, 2100, 337, 11, 314, 73, 538, 2, 350],
   "watchProvidersRegion": "CA"
 }
