@@ -30,11 +30,12 @@ npm-debug.log*
 # Claude Code local settings
 .claude/settings.local.json
 
-# Family config (personal — use family.config.example.json as template)
+# Family config (personal — use family.config.example.json as template).
+# The bare pattern has no slash, so it matches at ANY depth — this also ignores
+# the Montreal instance's real config (seed-data/montreal/family.config.json),
+# which names a real family incl. children. Only the names-free *.example.json
+# templates are tracked; real configs are placed on the Pi by hand.
 family.config.json
-# ...but DO track the Montreal instance's config template (the bare pattern
-# above matches at any depth, so it needs an explicit exception)
-!seed-data/montreal/family.config.json
 
 # Personal data files (not for public repo)
 seed-data/final_consolidated.json

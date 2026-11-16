@@ -1,0 +1,74 @@
+{
+  "_comment": "Names-free template for the Montreal instance's family.config.json. Copy this to family.config.json (gitignored), fill in real names/roles/aliases/colors, and optionally add per-member pixel avatars (see the main instance's config for the avatar shape). The real file is placed on the Pi by hand and is NOT committed.",
+  "familyName": "Example",
+  "members": [
+    {
+      "name": "Parent One",
+      "role": "mom",
+      "aliases": ["Parent One"],
+      "color": "#ec4899"
+    },
+    {
+      "name": "Parent Two",
+      "role": "dad",
+      "aliases": ["Parent Two"],
+      "color": "#2563eb"
+    },
+    {
+      "name": "Child One",
+      "role": "daughter",
+      "aliases": ["Child One"],
+      "color": "#9333ea"
+    },
+    {
+      "name": "Child Two",
+      "role": "son",
+      "aliases": ["Child Two"],
+      "color": "#16a34a"
+    }
+  ],
+  "guests": [],
+  "rotation": ["Child Two", "Child One", "Parent One", "Parent Two"],
+  "contexts": [
+    {
+      "id": "family",
+      "label": "Family",
+      "emoji": "👨‍👩‍👧‍👦",
+      "subtitle": "Movie Night",
+      "lists": ["family_to_watch"]
+    },
+    {
+      "id": "filmbuff",
+      "label": "Film Buff",
+      "emoji": "🎬",
+      "subtitle": "Big-screen greats",
+      "lists": ["film_buff"]
+    },
+    {
+      "id": "classics",
+      "label": "Classics",
+      "emoji": "📺",
+      "subtitle": "Classic shows",
+      "lists": ["show_classics"]
+    }
+  ],
+  "lists": [
+    {
+      "name": "family_to_watch",
+      "displayName": "Family Movie Night",
+      "description": "Movies to watch all together"
+    },
+    {
+      "name": "film_buff",
+      "displayName": "Film Buff Stuff",
+      "description": "Big-screen greats worth seeing at least once"
+    },
+    {
+      "name": "show_classics",
+      "displayName": "Classic Shows",
+      "description": "Series that earned their reputation"
+    }
+  ],
+  "streamingServiceIds": [8, 1796, 119, 2100, 337, 11, 314, 73, 538, 2, 350],
+  "watchProvidersRegion": "CA"
+}
