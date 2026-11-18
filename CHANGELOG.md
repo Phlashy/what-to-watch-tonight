@@ -193,6 +193,15 @@ followed it — see `docs/AUDIT-OUTCOME.md` for the story and the result. Tiers
 
 ### Fixed
 
+- **Updating this app no longer wipes other apps' offline pages.** The service
+  worker (the small script that lets the installed app open when offline) used
+  to delete every offline cache on the web address except its own when a new
+  version took over. Offline caches are shared by all apps on the same address,
+  so on anguspi an update here erased the care site's saved pages. It now only
+  removes caches whose names start with `movie-night-`. The cache name went from
+  `movie-night-v1` to `movie-night-v2` so installed copies pick up the corrected
+  worker. Covered by `tests/service-worker.test.js`.
+
 - **Duplicate titles (two rows for the same film)** — every "add a title" path
   did an unconditional `INSERT`, so adding a film the library already had created
   a second row rather than reusing the first. Production had accumulated 24 such
