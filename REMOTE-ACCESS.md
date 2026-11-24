@@ -53,6 +53,13 @@ flipped from private `serve` to public `funnel`:
   `~/what-to-watch-tonight/.env`. The server rejects every `/api` request
   without it (401); the client shows a one-time password screen. The static
   app shell is public, but all data behind it is gated.
+- **Wrong-password limit:** 20 wrong guesses in an hour from one address locks
+  that address out for the rest of the hour, and sends an ntfy alert
+  (`NTFY_TOPIC` in the same `.env`). The password screen now says "Wrong
+  password" instead of silently reappearing. On home Wi-Fi
+  (`anguspi.local`) every device looks like the same address to the app, so
+  nobody is ever locked out there — the alert still fires. To clear a lockout
+  early: `pm2 restart movie-night`.
 - **Monitoring:** `~/scripts/health-check.sh` (cron, every 5 min) probes
   `http://127.0.0.1:8093/movie-night/health` and checks the `:8443` funnel
   mount still exists → alerts to ntfy if the public route drops.

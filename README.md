@@ -86,6 +86,7 @@ See `.env.example` for the full list.
 - `TMDB_API_KEY` — Free from [TMDB](https://www.themoviedb.org/settings/api)
 - `ANTHROPIC_API_KEY` — From [Anthropic Console](https://console.anthropic.com/) (required for the chat feature)
 - `APP_PASSWORD` _(optional)_ — set a shared password to require sign-in; unset by default for zero-friction LAN use
+- `NTFY_TOPIC` _(optional)_ — [ntfy.sh](https://ntfy.sh) topic to alert when someone makes 20 wrong password guesses in an hour
 - `CORS_ORIGIN` _(optional)_ — comma-separated CORS allowlist; permissive by default
 - `PORT`, `DB_PATH` _(optional)_ — overrides
 

@@ -12,6 +12,15 @@ followed it — see `docs/AUDIT-OUTCOME.md` for the story and the result. Tiers
 
 ### Added
 
+- **The password screen says when the password is wrong, and guessing is
+  limited.** A wrong password used to be saved silently and the prompt simply
+  reappeared — indistinguishable from the app "forgetting" you. Now the screen
+  says "Wrong password — try again", a rejected saved password is forgotten
+  rather than re-sent on every open, and each visitor address gets 20 wrong
+  guesses per hour before it is locked out for the rest of that hour. The 20th
+  wrong guess sends a push alert via ntfy.sh if `NTFY_TOPIC` is set. Visitors
+  the server can't tell apart (no `X-Forwarded-For` from the proxy) are never
+  locked out, only alerted on. See `docs/DEPLOYMENT.md` → Security posture.
 - **Add titles the search can't find.** A "Can't find it? Add it manually or
   paste a link" option on the Search tab opens a form that (a) takes a pasted
   **TMDB or IMDb link** — if it's on TMDB it's added and enriched like a search

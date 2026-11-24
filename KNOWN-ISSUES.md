@@ -187,7 +187,9 @@ Last updated: 2026-08-04
   broad finish-a-show list behaviour are all immediate.
 - No search bar on all pages (only on the dedicated Search page).
 - API authentication is opt-in only (`APP_PASSWORD`); off by default, fine for
-  LAN use.
+  LAN use. When on, wrong guesses are limited to 20 per address per hour — but
+  the count is in memory (a restart clears it) and it relies on the reverse
+  proxy passing `X-Forwarded-For`.
 
 _Decided out of scope (do not revive):_ episode-level logging — the model was
 deliberately changed to log a **watching session of a series** (no per-episode

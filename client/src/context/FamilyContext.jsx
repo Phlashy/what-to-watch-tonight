@@ -1,5 +1,5 @@
 import { createContext, useContext, useState, useEffect, useMemo, useCallback } from 'react';
-import { api, setAuth } from '../api';
+import { api, getAuth, setAuth } from '../api';
 
 const FamilyContext = createContext(null);
 
@@ -7,18 +7,40 @@ export function FamilyProvider({ children }) {
   const [config, setConfig] = useState(null);
   const [error, setError] = useState(false);
   const [authRequired, setAuthRequired] = useState(false);
+  const [authMessage, setAuthMessage] = useState('');
 
-  const load = useCallback(() => {
+  // `justEntered` is true when the person has just typed a password, false when
+  // we're trying whatever this device had saved.
+  const load = useCallback((justEntered = false) => {
     setError(false);
     setAuthRequired(false);
+    const hadSavedPassword = Boolean(getAuth());
     api('/api/config')
       .then((r) => r.json())
       .then(setConfig)
       .catch((err) => {
         console.error('Failed to load family config:', err);
-        // A password-protected server returns 401 until the right password is sent.
-        if (err.status === 401) setAuthRequired(true);
-        else setError(true);
+        const code = err.body?.code;
+        if (err.status === 401) {
+          // A password-protected server returns 401 until the right password is sent.
+          let message = '';
+          if (code === 'wrong_password' || hadSavedPassword) {
+            // Forget the rejected password so it isn't re-sent (and counted as
+            // another wrong guess) every time the app opens.
+            setAuth('');
+            message = justEntered
+              ? 'Wrong password — try again.'
+              : 'The password saved on this device no longer works. Please enter it again.';
+          }
+          setAuthMessage(message);
+          setAuthRequired(true);
+        } else if (err.status === 429 && code === 'locked_out') {
+          // Too many wrong guesses from this address: the server says how long to wait.
+          setAuthMessage(err.message);
+          setAuthRequired(true);
+        } else {
+          setError(true);
+        }
       });
   }, []);
 
@@ -78,9 +100,10 @@ export function FamilyProvider({ children }) {
   if (authRequired) {
     return (
       <AuthGate
+        message={authMessage}
         onSubmit={(pw) => {
           setAuth(pw);
-          load();
+          load(true);
         }}
       />
     );
@@ -98,7 +121,7 @@ export function FamilyProvider({ children }) {
           the right network.
         </p>
         <button
-          onClick={load}
+          onClick={() => load()}
           className="mt-5 bg-amber-500 hover:bg-amber-400 text-black font-semibold rounded-xl px-5 py-2.5 text-sm transition-colors"
         >
           Try again
@@ -118,7 +141,7 @@ export function useFamily() {
 }
 
 /** Password prompt shown only when the server requires a shared password. */
-function AuthGate({ onSubmit }) {
+function AuthGate({ onSubmit, message }) {
   const [value, setValue] = useState('');
   return (
     <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col items-center justify-center px-6">
@@ -138,8 +161,17 @@ function AuthGate({ onSubmit }) {
           onChange={(e) => setValue(e.target.value)}
           placeholder="Password"
           autoFocus
-          className="w-full bg-slate-800 border border-slate-700 rounded-xl px-4 py-3 text-white placeholder-slate-500 text-sm focus:outline-none focus:border-amber-400"
+          aria-label="Password"
+          aria-describedby={message ? 'auth-message' : undefined}
+          className={`w-full bg-slate-800 border rounded-xl px-4 py-3 text-white placeholder-slate-500 text-sm focus:outline-none focus:border-amber-400 ${
+            message ? 'border-red-400' : 'border-slate-700'
+          }`}
         />
+        {message && (
+          <p id="auth-message" role="alert" className="text-sm text-red-300 mt-3">
+            {message}
+          </p>
+        )}
         <button
           type="submit"
           disabled={!value.trim()}

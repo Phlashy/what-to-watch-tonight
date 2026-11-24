@@ -24,6 +24,8 @@ Environment (`.env`, see `.env.example`):
 | `DB_PATH`           | no       | `~/movie-night-data/movies.db` | SQLite file (outside the repo)          |
 | `APP_PASSWORD`      | no       | unset                          | Optional shared password (see Security) |
 | `CORS_ORIGIN`       | no       | allow all                      | Comma-separated CORS allowlist          |
+| `NTFY_TOPIC`        | no       | unset (no alerts)              | ntfy.sh topic for password-guess alerts |
+| `WTWT_REPORT_NAME`  | no       | `Movie Night`                  | Instance name shown in those alerts     |
 
 The database lives **outside the repo**. The schema is created/updated
 automatically on startup by the migration runner — no manual step.
@@ -96,6 +98,19 @@ example (ports, nginx, public exposure, monitoring) lives in the maintainer's
 - **Exposing the app more widely:** set `APP_PASSWORD` to require a shared
   password (the client prompts once and remembers it), and set `CORS_ORIGIN` to
   your domain(s). The chat endpoint is rate-limited regardless.
+- **Wrong-password limit:** each visitor address gets **20 wrong guesses per
+  hour**. The 20th locks that address out until the hour (counted from its
+  first wrong guess) is up — even the correct password is refused meanwhile,
+  otherwise the limit wouldn't stop guessing. Requests that send no password at
+  all (a first visit) aren't counted. If `NTFY_TOPIC` is set, the 20th wrong
+  guess also sends a push alert via [ntfy.sh](https://ntfy.sh) naming the
+  address. Counts live in memory, so a restart clears them.
+- **The limit needs the visitor's real address.** The server reads it from the
+  `X-Forwarded-For` header set by the reverse proxy in front of it (`trust
+proxy` is `loopback`). If the proxy doesn't send that header, every visitor
+  looks like `127.0.0.1` — in that case the server deliberately **never locks
+  anyone out** (one person's typos would lock out the whole household) but
+  still counts and still sends the alert.
 
 ---
 

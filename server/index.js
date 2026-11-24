@@ -46,7 +46,30 @@ app.use(require('./lib/validate').limitBodyStrings);
 app.get('/health', (req, res) => res.json({ status: 'ok' }));
 
 // Optional shared-password auth on the whole API (off unless APP_PASSWORD is set).
-app.use('/api', require('./lib/auth').requireAuth(process.env.APP_PASSWORD));
+// 20 wrong guesses from one address locks that address out for an hour and
+// sends a push alert (if NTFY_TOPIC is set) — see lib/auth.js.
+const instanceName = process.env.WTWT_REPORT_NAME || 'Movie Night';
+app.use(
+  '/api',
+  require('./lib/auth').requireAuth(process.env.APP_PASSWORD, {
+    onFailure: ({ ip, count }) => {
+      console.warn(`[auth] wrong password from ${ip} (${count} this hour)`);
+    },
+    onLockout: ({ ip, count, blocked }) => {
+      console.warn(
+        `[auth] ${count} wrong passwords from ${ip} — ${blocked ? 'locked out' : 'NOT locked out (address not identifiable)'}`
+      );
+      require('./lib/notify').notify({
+        title: `${instanceName} - password guessing`,
+        message: blocked
+          ? `${count} wrong password attempts from ${ip} in the last hour. That address is now locked out for up to an hour.`
+          : `${count} wrong password attempts in the last hour. The visitor's address isn't visible to the app, so nobody has been locked out.`,
+        priority: 'high',
+        tags: 'rotating_light',
+      });
+    },
+  })
+);
 
 // Rate-limit the chat endpoint (it calls the paid Anthropic API).
 app.use('/api/chat', require('./lib/rate-limit').rateLimit({ windowMs: 60000, max: 20 }));
